@@ -2,154 +2,202 @@ import pandas as pd
 import os
 import json
 import re
+import hashlib
 import xlwings as xw
 
-# ===== CONFIG =====
+# ========= CONFIG =========
 EXCEL_FILE = "MasterProductList.xlsx"
 OUTPUT_DIR = "output"
-IMAGE_FOLDER = "images"
+IMAGE_DIR = os.path.join(OUTPUT_DIR, "images")
 SKU_COLUMN = "sku_number"
-# ===================
+VISIBLE_EXCEL = False
+# ==========================
 
-# ---------------------------
+
+# --------------------------
 # Helpers
-# ---------------------------
+# --------------------------
 
 def slugify(text):
-    return re.sub(r'[^a-zA-Z0-9_-]', '_', str(text).strip())
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', str(text))
+
 
 def ensure_dirs():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    os.makedirs(os.path.join(OUTPUT_DIR, IMAGE_FOLDER), exist_ok=True)
+    os.makedirs(IMAGE_DIR, exist_ok=True)
 
-def clean_column_names(df):
+
+def clean_columns(df):
     df.columns = [
-        col.strip()
-        .lower()
-        .replace(" ", "_")
-        .replace("#", "number")
+        col.strip().lower().replace(" ", "_").replace("#", "number")
         for col in df.columns
     ]
-    if "quanity" in df.columns:
-        df.rename(columns={"quanity": "quantity"}, inplace=True)
     return df
 
-def clean_sku(value):
-    if pd.isna(value):
+
+def clean_value(val):
+    if pd.isna(val):
         return None
-    if isinstance(value, float):
-        if value.is_integer():
-            return str(int(value))
-        return str(value)
-    return str(value).strip()
+    if isinstance(val, pd.Timestamp):
+        return val.isoformat()
+    if isinstance(val, float) and val.is_integer():
+        return str(int(val))
+    return val
 
-def normalize_value(value):
-    if pd.isna(value):
-        return None
-    if isinstance(value, pd.Timestamp):
-        return value.isoformat()
-    return value
 
-# ---------------------------
-# Image extraction using xlwings
-# ---------------------------
+def file_hash(path):
+    with open(path, "rb") as f:
+        return hashlib.md5(f.read()).hexdigest()
 
-def extract_sheet_images(sheet, sheet_name):
-    """
-    Extract all images from a sheet using xlwings and map to row numbers.
-    Returns: {row_number: image_path}
-    """
+
+# --------------------------
+# IMAGE EXTRACTION
+# --------------------------
+
+def extract_images(sheet, sheet_name, sku_lookup):
     image_map = {}
-    pics = sheet.pictures
-    print(f"{sheet_name}: Found {len(pics)} images via xlwings")
+    seen_hashes = {}
 
-    for idx, pic in enumerate(pics):
+    shapes = sheet.api.Shapes
+    print(f"\n[Image Extraction] {sheet_name}")
+    print(f"Shapes found: {shapes.Count}")
+
+    for i in range(1, shapes.Count + 1):
+        shape = shapes.Item(i)
+
         try:
-            row = pic.top_left_cell.row
-            filename = f"{slugify(sheet_name)}_{idx+1}.png"
-            filepath = os.path.join(OUTPUT_DIR, IMAGE_FOLDER, filename)
+            if shape.Type == 13:  # msoPicture
+                row = shape.TopLeftCell.Row
 
-            # Save the picture
-            pic.api.Copy()  # copy to clipboard
-            img = xw.Picture(picture=pic.api)
-            img.save(filepath)
+                if row not in sku_lookup:
+                    continue
 
-            # Map to row
-            if row in image_map:
-                # support multiple images per row
-                if isinstance(image_map[row], list):
-                    image_map[row].append(f"{IMAGE_FOLDER}/{filename}")
+                sku = slugify(sku_lookup[row])
+                if row not in image_map:
+                    counter = 1
                 else:
-                    image_map[row] = [image_map[row], f"{IMAGE_FOLDER}/{filename}"]
-            else:
-                image_map[row] = f"{IMAGE_FOLDER}/{filename}"
+                    counter = len(image_map[row]) + 1
 
-            print(f"Mapped image {idx+1} → Excel row {row}")
+                if counter == 1:
+                    base_filename = f"{sku}.png"
+                else:
+                    base_filename = f"{sku}_{counter}.png"
+                path = os.path.abspath(os.path.join(IMAGE_DIR, base_filename))
+
+                # Export using chart trick
+                shape.Copy()
+                chart = sheet.api.ChartObjects().Add(0, 0, shape.Width, shape.Height)
+                chart.Chart.Paste()
+                chart.Chart.Export(path)
+                chart.Delete()
+
+                # Deduplicate
+                img_hash = file_hash(path)
+
+                if img_hash in seen_hashes:
+                    os.remove(path)
+                    final_filename = seen_hashes[img_hash]
+                else:
+                    seen_hashes[img_hash] = base_filename
+                    final_filename = base_filename
+
+                image_map.setdefault(row, []).append(f"images/{final_filename}")
+
+                print(f"  ✔ {sku} → image saved")
 
         except Exception as e:
-            print(f"⚠️ Failed extracting image in {sheet_name}: {e}")
+            print(f"  ✖ Failed on shape {i}: {e}")
 
     return image_map
 
-# ---------------------------
-# Main Processing
-# ---------------------------
 
-def process_excel():
+# --------------------------
+# MAIN PROCESS
+# --------------------------
+
+def process():
     ensure_dirs()
 
-    xls = pd.ExcelFile(EXCEL_FILE)
-    all_data = []
+    print("Opening Excel...")
 
-    # Open workbook with xlwings
-    wb = xw.Book(EXCEL_FILE)
+    app = xw.App(visible=VISIBLE_EXCEL)
 
-    for sheet_name in xls.sheet_names:
-        print(f"\nProcessing sheet: {sheet_name}")
+    # 🚀 Speed optimizations
+    app.screen_updating = False
+    app.display_alerts = False
+    app.calculation = 'manual'
 
-        df = pd.read_excel(xls, sheet_name=sheet_name)
-        df = clean_column_names(df)
+    wb = app.books.open(EXCEL_FILE)
+
+    for sheet in wb.sheets:
+        sheet_name = sheet.name
+
+        print("\n==============================")
+        print(f"Processing Sheet: {sheet_name}")
+        print("==============================")
+
+        df = pd.read_excel(EXCEL_FILE, sheet_name=sheet_name)
+        df = clean_columns(df)
         df.dropna(how="all", inplace=True)
-        df["excel_row_number"] = df.index + 2
 
         if SKU_COLUMN not in df.columns:
-            print(f"Skipping {sheet_name} — no SKU column.")
+            print("  ⚠ SKU column not found — skipping")
             continue
 
-        df[SKU_COLUMN] = df[SKU_COLUMN].apply(clean_sku)
-        df = df[df[SKU_COLUMN].notna() & (df[SKU_COLUMN] != "")]
-        df["worksheet_name"] = sheet_name
+        df[SKU_COLUMN] = df[SKU_COLUMN].apply(clean_value)
 
-        # Extract images via xlwings
-        sheet = wb.sheets[sheet_name]
-        embedded_images = extract_sheet_images(sheet, sheet_name)
+        # Remove rows without SKU
+        df = df[df[SKU_COLUMN].notna() & (df[SKU_COLUMN] != "")]
+
+        if df.empty:
+            print("  ⚠ No valid SKU rows")
+            continue
+
+        df["excel_row"] = df.index + 2
+
+        # Build row → SKU lookup
+        sku_lookup = {
+            int(row["excel_row"]): row[SKU_COLUMN]
+            for _, row in df.iterrows()
+        }
+
+        # Extract images
+        image_map = extract_images(sheet, sheet_name, sku_lookup)
+
+        # Drop legacy image columns
+        df.drop(columns=["image", "image_local", "images"],
+                inplace=True,
+                errors="ignore")
+
+        records = []
 
         for _, row in df.iterrows():
-            excel_row_number = row["excel_row_number"]
+            excel_row = int(row["excel_row"])
+
             record = {
-                key: normalize_value(value)
+                key: clean_value(value)
                 for key, value in row.items()
-                if key != "excel_row_number"
+                if key != "excel_row"
             }
-            record["row_index"] = int(excel_row_number) - 1
-            record["image_local"] = embedded_images.get(int(excel_row_number))
-            all_data.append(record)
 
-    # Close workbook
+            record["images"] = image_map.get(excel_row, [])
+            records.append(record)
+
+        # Write per-sheet JSON
+        sheet_filename = slugify(sheet_name) + ".json"
+        sheet_path = os.path.join(OUTPUT_DIR, sheet_filename)
+
+        with open(sheet_path, "w", encoding="utf-8") as f:
+            json.dump(records, f, indent=2, ensure_ascii=False)
+
+        print(f"  ✔ JSON exported: {sheet_filename}")
+        print(f"  ✔ Records: {len(records)}")
+
     wb.close()
+    app.quit()
 
-    # Write JSON
-    output_path = os.path.join(OUTPUT_DIR, "data.json")
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(all_data, f, indent=2, ensure_ascii=False, allow_nan=False)
+    print("\nDONE.")
+    print("Images folder:", IMAGE_DIR)
 
-    print("\n✅ Done.")
-    print(f"📄 JSON saved to: {output_path}")
-    print(f"🖼 Images saved to: {os.path.join(OUTPUT_DIR, IMAGE_FOLDER)}")
-
-# ---------------------------
-# Run
-# ---------------------------
 
 if __name__ == "__main__":
-    process_excel()
+    process()
