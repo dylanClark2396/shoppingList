@@ -11,13 +11,27 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Accordion: typeof import('primevue/accordion')['default']
+    AccordionContent: typeof import('primevue/accordioncontent')['default']
+    AccordionHeader: typeof import('primevue/accordionheader')['default']
+    AccordionPanel: typeof import('primevue/accordionpanel')['default']
     AutoComplete: typeof import('primevue/autocomplete')['default']
     Button: typeof import('primevue/button')['default']
     Card: typeof import('primevue/card')['default']
+    Chips: typeof import('primevue/chips')['default']
+    DataView: typeof import('primevue/dataview')['default']
+    Dropdown: typeof import('primevue/dropdown')['default']
+    InputChips: typeof import('primevue/inputchips')['default']
+    InputNumber: typeof import('primevue/inputnumber')['default']
+    Inputtext: typeof import('primevue/inputtext')['default']
+    InputText: typeof import('primevue/inputtext')['default']
     MeasurementCard: typeof import('./src/components/MeasurementCard.vue')['default']
+    MeasurementCardEdit: typeof import('./src/components/MeasurementCardEdit.vue')['default']
     Menu: typeof import('primevue/menu')['default']
     PanelMenu: typeof import('primevue/panelmenu')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Select: typeof import('primevue/select')['default']
+    Tag: typeof import('primevue/tag')['default']
   }
 }

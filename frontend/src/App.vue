@@ -1,13 +1,16 @@
 <template>
-  <Button label="Project" @click="router.push("/projects")"></Button>
-
+  <div id="app">
+    <router-view />
+  </div>
 </template>
 
 <script setup lang="ts">
-import router from './router';
-
 </script>
 
-<style scoped>
-
+<style>
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
 </style>

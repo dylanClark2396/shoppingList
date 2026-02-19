@@ -53,11 +53,12 @@ def file_hash(path):
 # IMAGE EXTRACTION
 # --------------------------
 
-def extract_images(sheet, sku_lookup):
+def extract_images(sheet, sheet_name, sku_lookup):
     image_map = {}
     seen_hashes = {}
 
     shapes = sheet.api.Shapes
+    print(f"\n[Image Extraction] {sheet_name}")
     print(f"Shapes found: {shapes.Count}")
 
     for i in range(1, shapes.Count + 1):
@@ -71,13 +72,18 @@ def extract_images(sheet, sku_lookup):
                     continue
 
                 sku = slugify(sku_lookup[row])
+                if row not in image_map:
+                    counter = 1
+                else:
+                    counter = len(image_map[row]) + 1
 
-                # Determine filename (clean numbering per SKU)
-                count = len(image_map.get(row, [])) + 1
-                filename = f"{sku}.png" if count == 1 else f"{sku}_{count}.png"
-                path = os.path.abspath(os.path.join(IMAGE_DIR, filename))
+                if counter == 1:
+                    base_filename = f"{sku}.png"
+                else:
+                    base_filename = f"{sku}_{counter}.png"
+                path = os.path.abspath(os.path.join(IMAGE_DIR, base_filename))
 
-                # Export image via chart trick
+                # Export using chart trick
                 shape.Copy()
                 chart = sheet.api.ChartObjects().Add(0, 0, shape.Width, shape.Height)
                 chart.Chart.Paste()
@@ -91,12 +97,12 @@ def extract_images(sheet, sku_lookup):
                     os.remove(path)
                     final_filename = seen_hashes[img_hash]
                 else:
-                    seen_hashes[img_hash] = filename
-                    final_filename = filename
+                    seen_hashes[img_hash] = base_filename
+                    final_filename = base_filename
 
                 image_map.setdefault(row, []).append(f"images/{final_filename}")
 
-                print(f"  ✔ Image exported for SKU {sku}")
+                print(f"  ✔ {sku} → image saved")
 
         except Exception as e:
             print(f"  ✖ Failed on shape {i}: {e}")
@@ -121,8 +127,6 @@ def process():
     app.calculation = 'manual'
 
     wb = app.books.open(EXCEL_FILE)
-
-    combined_records = []
 
     for sheet in wb.sheets:
         sheet_name = sheet.name
@@ -156,13 +160,15 @@ def process():
             for _, row in df.iterrows()
         }
 
-        print("Extracting images...")
-        image_map = extract_images(sheet, sku_lookup)
+        # Extract images
+        image_map = extract_images(sheet, sheet_name, sku_lookup)
 
-        # Remove legacy image columns
+        # Drop legacy image columns
         df.drop(columns=["image", "image_local", "images"],
                 inplace=True,
                 errors="ignore")
+
+        records = []
 
         for _, row in df.iterrows():
             excel_row = int(row["excel_row"])
@@ -173,26 +179,24 @@ def process():
                 if key != "excel_row"
             }
 
-            record["sheet_name"] = sheet_name
             record["images"] = image_map.get(excel_row, [])
+            records.append(record)
 
-            combined_records.append(record)
+        # Write per-sheet JSON
+        sheet_filename = slugify(sheet_name) + ".json"
+        sheet_path = os.path.join(OUTPUT_DIR, sheet_filename)
 
-        print(f"  ✔ {len(df)} rows processed")
+        with open(sheet_path, "w", encoding="utf-8") as f:
+            json.dump(records, f, indent=2, ensure_ascii=False)
+
+        print(f"  ✔ JSON exported: {sheet_filename}")
+        print(f"  ✔ Records: {len(records)}")
 
     wb.close()
     app.quit()
 
-    output_json = os.path.join(OUTPUT_DIR, "data.json")
-
-    print("\nWriting combined JSON...")
-    with open(output_json, "w", encoding="utf-8") as f:
-        json.dump(combined_records, f, indent=2, ensure_ascii=False)
-
     print("\nDONE.")
-    print("JSON saved to:", output_json)
-    print("Images saved to:", IMAGE_DIR)
-    print("Total records:", len(combined_records))
+    print("Images folder:", IMAGE_DIR)
 
 
 if __name__ == "__main__":

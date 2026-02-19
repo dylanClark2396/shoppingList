@@ -2,56 +2,125 @@
   <!-- header section -->
   <div style="margin-bottom: 2rem;">
     <span class="topbar-title">
-      Project Name - Space Name
+      {{ project?.name }} - {{ currentSpace?.name }}
     </span>
+    <div>
+      <Button label="back" outlined text size="large" @click="router.push('/')" />
+    </div>
   </div>
-  
+
   <!-- Main content section -->
   <div class="layout">
     <!-- space navigation menu -->
-     <div class="space-menu left">
-      <Menu :model="items" />
-     </div>
+    <div class="space-menu left">
+      <Menu :model="spaceItems" />
+    </div>
 
-     <!-- measurement module section -->
-     <div class="right">
+    <!-- measurement module section -->
+    <div class="right">
       <div class="cards-container">
-        <Card class="new-module">
-          <template #content>
-              <Button icon="pi pi-plus" size="large" aria-label="Filter" outlined />
-          </template>
-        </Card>
-        <div v-for="value in measurmentModules">
-          <MeasurementCard :name="value" :all-products="allProducts"/>
+        <MeasurementCardEdit @create-measurement="handleCreateMeasurement"
+          @update-measurement="handleUpdateMeasurement" />
+        <div v-for="value in getcurrentSpace()?.measurements">
+          <MeasurementCard :measurement="value" :all-products="allProducts" @add-product="handleAddProduct" />
         </div>
       </div>
-     </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 
-import { ref } from "vue";
-import MeasurementCard from "./components/MeasurementCard.vue";
+import { computed, onMounted, ref, watch } from "vue";
+import MeasurementCard from "@/components/MeasurementCard.vue";
+import router from "@/router";
+import { useRoute } from "vue-router";
+import type { Measurement, Product, Project, Space } from "@/models";
+import MeasurementCardEdit from "@/components/MeasurementCardEdit.vue";
+import { useApi } from '@/composables/useApi';
 
-const items = ref([
-    { label: 'Kitchen'},
-    { label: 'Pantry'}
-]);
+const { getProject, getProducts, createMeasurement, updateMeasurement, addProductToMeasurement } = useApi();
 
-const allProducts = ref<string[]>(["insert", "small insert", "big insert"]);
+const route = useRoute();
+const project = ref<Project | null>(null);
+const currentSpace = ref<Space>();
+const allProducts = ref<Product[]>([]);
 
-const measurmentModules = ref(["top drawer", "middle drawer", "bottom drawer"])
+watch(() => route.params.id, loadProject);
+
+onMounted(async () => {
+  loadProject();
+  loadProducts();
+});
+
+const spaceItems = computed(() =>
+  project.value?.spaces.map((space) => ({
+    label: space.name,
+    command: () => {
+      currentSpace.value = space;
+    }
+  }))
+)
+
+async function loadProject() {
+  const id = route.params.id;
+  if (id) {
+    project.value = await getProject(Number(id));
+    currentSpace.value = project.value?.spaces[0];
+  }
+}
+
+async function loadProducts() {
+  allProducts.value = await getProducts();
+}
+
+const getcurrentSpace = () => {
+  return project.value?.spaces.find(space => space.id === currentSpace.value?.id);
+}
+
+async function handleCreateMeasurement(measurement: Partial<Measurement>) {
+  const newMeasurement = await createMeasurement(Number(currentSpace.value?.id), measurement);
+
+  project.value?.spaces.find(space => space.id === currentSpace.value?.id)?.measurements.push(newMeasurement)
+}
+
+function handleUpdateMeasurement(updated: Measurement) {
+  updateMeasurement(Number(currentSpace.value?.id), updated.id, updated);
+
+  const index = project.value?.spaces
+    .find(space => space.id === currentSpace.value?.id)
+    ?.measurements.findIndex(m => m.id === updated.id);
+
+  if (index !== -1) {
+    const space = project.value?.spaces.find(space => space.id === currentSpace.value?.id);
+    space?.measurements.splice(index!, 1, updated);
+  } else {
+    console.error('Measurement not found for update');
+  }
+}
+
+function handleAddProduct(payload: { measurementId: number; product: Product }) {
+
+  addProductToMeasurement(Number(currentSpace.value?.id), payload.measurementId, payload.product);
+
+  const measurement = project.value?.spaces
+    .find(space => space.id === currentSpace.value?.id)
+    ?.measurements.find(m => m.id === payload.measurementId);
+
+  if (measurement) {
+    measurement.products.push(payload.product);
+  }
+}
 
 </script>
 
 <style scoped>
 .topbar-title {
-    font-size: 3rem;
-    font-weight: 500;
-    color: var(--p-surface-700);
-    line-height: 1;
-    margin-left: 1rem;
+  font-size: 3rem;
+  font-weight: 500;
+  color: var(--p-surface-700);
+  line-height: 1;
+  margin-left: 1rem;
 }
 
 .space-menu {
@@ -64,20 +133,12 @@ const measurmentModules = ref(["top drawer", "middle drawer", "bottom drawer"])
 }
 
 .left {
-  flex: 0 0 250px; /* fixed sidebar */
+  flex: 0 0 200px;
+  /* fixed sidebar */
 }
 
 .right {
   flex: 1;
-}
-
-.new-module {
-  --p-card-shadow: none;
-  border-style: solid;
-  border-color: lightgrey;
-  border-width: 1px;
-  padding: 1rem;
-  justify-content: center;
 }
 
 /* Container for all cards */
@@ -86,5 +147,4 @@ const measurmentModules = ref(["top drawer", "middle drawer", "bottom drawer"])
   flex-wrap: wrap;
   gap: 1rem;
 }
-
 </style>
