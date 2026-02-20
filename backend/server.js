@@ -9,14 +9,16 @@ app.use(express.json());
 const DATA_FILE = './data/projects.json';
 const PRODUCTS_FILE = '../python/output/data.json';
 
+// =========================
+// 🔧 ID GENERATOR
+// =========================
+
 function generateId() {
-  // simple millisecond-based unique ID
   return Date.now() + Math.floor(Math.random() * 1000);
 }
 
-
 // =========================
-// 🔧 FILE HELPERS (SAFE)
+// 🔧 FILE HELPERS
 // =========================
 
 function readJson(file, fallback = []) {
@@ -35,7 +37,6 @@ function writeJsonAtomic(file, data) {
   fs.renameSync(temp, file);
 }
 
-
 // =========================
 // 📦 PROJECT ROUTES
 // =========================
@@ -45,7 +46,6 @@ app.get('/projects', (req, res) => {
   const data = readJson(DATA_FILE, []);
   res.json(data);
 });
-
 
 // GET single project
 app.get('/projects/:id', (req, res) => {
@@ -59,19 +59,22 @@ app.get('/projects/:id', (req, res) => {
   res.json(project);
 });
 
-
 // =========================
 // ✨ CREATE PROJECT
 // =========================
 
 app.post('/projects', (req, res) => {
   const projects = readJson(DATA_FILE, []);
-  const newProject = req.body;
 
-  if (!newProject.id) newProject.id = generateId();
-
-  newProject.spaces = newProject.spaces || [];
-  newProject.measurements = newProject.measurements || [];
+  const newProject = {
+    id: generateId(),
+    name: req.body.name,
+    spaces: (req.body.spaces || []).map(s => ({
+      id: generateId(),
+      name: s.name ?? s,
+      measurements: []
+    }))
+  };
 
   projects.push(newProject);
   writeJsonAtomic(DATA_FILE, projects);
@@ -79,9 +82,8 @@ app.post('/projects', (req, res) => {
   res.json({ status: 'ok', project: newProject });
 });
 
-
 // =========================
-// ✏️ UPDATE PROJECT 
+// ✏️ UPDATE PROJECT
 // =========================
 
 app.patch('/projects/:id', (req, res) => {
@@ -98,130 +100,183 @@ app.patch('/projects/:id', (req, res) => {
   res.json({ status: 'ok', project });
 });
 
-
 // =========================
-// ➕ ADD SPACE
+// ❌ DELETE PROJECT (optional but useful)
 // =========================
 
-// Add a new space to a project
-app.post('/projects/:id/spaces', (req, res) => {
-  const projects = readJson(DATA_FILE);
-  const project = projects.find(p => p.id === Number(req.params.id));
-
-  if (!project) return res.status(404).json({ error: 'Project not found' });
-
-  const newSpace = req.body;
-
-  if (!newSpace.id) newSpace.id = generateId();
-  project.spaces.push({ ...newSpace });
+app.delete('/projects/:id', (req, res) => {
+  let projects = readJson(DATA_FILE, []);
+  projects = projects.filter(p => p.id !== Number(req.params.id));
 
   writeJsonAtomic(DATA_FILE, projects);
-  res.json({ status: 'ok', space: newSpace });
+  res.json({ status: 'ok' });
 });
 
-
 // =========================
-// ✏️ UPDATE SPACE
+// 🏠 SPACES
 // =========================
 
-// Update a space
-app.patch('/projects/:projectId/spaces/:spaceId', (req, res) => {
-  const projects = readJson(DATA_FILE);
+// ➕ Add space
+app.post('/projects/:projectId/spaces', (req, res) => {
+  const projects = readJson(DATA_FILE, []);
   const project = projects.find(p => p.id === Number(req.params.projectId));
-  if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  const space = project.spaces.find((s) => s.id === Number(req.params.spaceId));
-  if (!space) return res.status(404).json({ error: 'Space not found' });
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
 
-  Object.assign(space, req.body); // update name or measurements
+  project.spaces = project.spaces || [];
+
+  const space = {
+    id: generateId(),
+    name: req.body.name,
+    measurements: []
+  };
+
+  project.spaces.push(space);
+
   writeJsonAtomic(DATA_FILE, projects);
-
   res.json({ status: 'ok', space });
 });
 
-
-// =========================
-// 📐 ADD MEASUREMENT
-// =========================
-
-app.post('/projects/:projectId/measurements', (req, res) => {
+// ✏️ Update space
+app.patch('/projects/:projectId/spaces/:spaceId', (req, res) => {
   const projects = readJson(DATA_FILE, []);
   const project = projects.find(p => p.id === Number(req.params.projectId));
+  if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  if (!project) {
-    return res.status(404).json({ error: 'Project not found' });
-  }
+  const space = project.spaces?.find(
+    s => s.id === Number(req.params.spaceId)
+  );
+  if (!space) return res.status(404).json({ error: 'Space not found' });
 
-  const measurement = req.body;
-
-  if (!measurement.id) measurement.id = generateId();
-  measurement.products = measurement.products || [];
-
-  project.measurements = project.measurements || [];
-
-  project.measurements.push(measurement);
+  Object.assign(space, req.body);
 
   writeJsonAtomic(DATA_FILE, projects);
-  res.json({ status: 'ok', measurement });
+  res.json({ status: 'ok', space });
 });
 
-
-// =========================
-// ✏️ UPDATE MEASUREMENT
-// =========================
-
-app.patch('/projects/:projectId/measurements/:measurementId', (req, res) => {
+// ❌ Delete space
+app.delete('/projects/:projectId/spaces/:spaceId', (req, res) => {
   const projects = readJson(DATA_FILE, []);
   const project = projects.find(p => p.id === Number(req.params.projectId));
+  if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  if (!project) {
-    return res.status(404).json({ error: 'Project not found' });
-  }
-
-  const measurement = project.measurements?.find(
-    m => m.id === Number(req.params.measurementId)
+  project.spaces = (project.spaces || []).filter(
+    s => s.id !== Number(req.params.spaceId)
   );
 
-  if (!measurement) {
-    return res.status(404).json({ error: 'Measurement not found' });
-  }
-
-  Object.assign(measurement, req.body);
-
   writeJsonAtomic(DATA_FILE, projects);
-  res.json({ status: 'ok', measurement });
+  res.json({ status: 'ok' });
 });
 
-
 // =========================
-// ➕ ADD PRODUCT TO MEASUREMENT
+// 📐 MEASUREMENTS (UNDER SPACE)
 // =========================
 
+// ➕ Add measurement
 app.post(
-  '/projects/:projectId/measurements/:measurementId/product',
+  '/projects/:projectId/spaces/:spaceId/measurements',
   (req, res) => {
     const projects = readJson(DATA_FILE, []);
     const project = projects.find(p => p.id === Number(req.params.projectId));
+    if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
+    const space = project.spaces?.find(
+      s => s.id === Number(req.params.spaceId)
+    );
+    if (!space) return res.status(404).json({ error: 'Space not found' });
 
-    const measurement = project.measurements?.find(
+    space.measurements = space.measurements || [];
+
+    const measurement = {
+      id: generateId(),
+      ...req.body,
+      products: []
+    };
+
+    space.measurements.push(measurement);
+
+    writeJsonAtomic(DATA_FILE, projects);
+    res.json({ status: 'ok', measurement });
+  }
+);
+
+// ✏️ Update measurement
+app.patch(
+  '/projects/:projectId/spaces/:spaceId/measurements/:measurementId',
+  (req, res) => {
+    const projects = readJson(DATA_FILE, []);
+    const project = projects.find(p => p.id === Number(req.params.projectId));
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const space = project.spaces?.find(
+      s => s.id === Number(req.params.spaceId)
+    );
+    if (!space) return res.status(404).json({ error: 'Space not found' });
+
+    const measurement = space.measurements?.find(
       m => m.id === Number(req.params.measurementId)
     );
-
-    if (!measurement) {
+    if (!measurement)
       return res.status(404).json({ error: 'Measurement not found' });
-    }
 
-    const product = req.body;
+    Object.assign(measurement, req.body);
 
-    if (!product.id) product.id = generateId(); // assign id if missing
+    writeJsonAtomic(DATA_FILE, projects);
+    res.json({ status: 'ok', measurement });
+  }
+);
+
+// ❌ Delete measurement
+app.delete(
+  '/projects/:projectId/spaces/:spaceId/measurements/:measurementId',
+  (req, res) => {
+    const projects = readJson(DATA_FILE, []);
+    const project = projects.find(p => p.id === Number(req.params.projectId));
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const space = project.spaces?.find(
+      s => s.id === Number(req.params.spaceId)
+    );
+    if (!space) return res.status(404).json({ error: 'Space not found' });
+
+    space.measurements = (space.measurements || []).filter(
+      m => m.id !== Number(req.params.measurementId)
+    );
+
+    writeJsonAtomic(DATA_FILE, projects);
+    res.json({ status: 'ok' });
+  }
+);
+
+// =========================
+// 🛍 PRODUCTS IN MEASUREMENT
+// =========================
+
+// ➕ Add product
+app.post(
+  '/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products',
+  (req, res) => {
+    const projects = readJson(DATA_FILE, []);
+    const project = projects.find(p => p.id === Number(req.params.projectId));
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const space = project.spaces?.find(
+      s => s.id === Number(req.params.spaceId)
+    );
+    if (!space) return res.status(404).json({ error: 'Space not found' });
+
+    const measurement = space.measurements?.find(
+      m => m.id === Number(req.params.measurementId)
+    );
+    if (!measurement)
+      return res.status(404).json({ error: 'Measurement not found' });
 
     measurement.products = measurement.products || [];
 
-    // prevent duplicates
+    const product = req.body;
+
     const exists = measurement.products.some(p => p.sku === product.sku);
     if (exists) {
       return res.status(400).json({ error: 'Product already exists' });
@@ -234,28 +289,24 @@ app.post(
   }
 );
 
-
-// =========================
-// ❌ REMOVE PRODUCT
-// =========================
-
+// ❌ Remove product
 app.delete(
-  '/projects/:projectId/measurements/:measurementId/products/:sku',
+  '/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products/:sku',
   (req, res) => {
     const projects = readJson(DATA_FILE, []);
     const project = projects.find(p => p.id === Number(req.params.projectId));
+    if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
+    const space = project.spaces?.find(
+      s => s.id === Number(req.params.spaceId)
+    );
+    if (!space) return res.status(404).json({ error: 'Space not found' });
 
-    const measurement = project.measurements?.find(
+    const measurement = space.measurements?.find(
       m => m.id === Number(req.params.measurementId)
     );
-
-    if (!measurement) {
+    if (!measurement)
       return res.status(404).json({ error: 'Measurement not found' });
-    }
 
     measurement.products = (measurement.products || []).filter(
       p => p.sku !== req.params.sku
@@ -266,18 +317,15 @@ app.delete(
   }
 );
 
-
 // =========================
-// 🛍 PRODUCTS ROUTES
+// 🛍 PRODUCTS MASTER LIST
 // =========================
 
-// GET all products
 app.get('/products', (req, res) => {
   const data = readJson(PRODUCTS_FILE, []);
   res.json(data);
 });
 
-// GET product by id
 app.get('/products/:id', (req, res) => {
   const data = readJson(PRODUCTS_FILE, []);
   const product = data.find(p => p.id === Number(req.params.id));
@@ -288,7 +336,6 @@ app.get('/products/:id', (req, res) => {
 
   res.json(product);
 });
-
 
 // =========================
 // 🚀 START SERVER

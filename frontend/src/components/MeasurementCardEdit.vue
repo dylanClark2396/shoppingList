@@ -2,6 +2,11 @@
   <Card class="card">
     <template #title>
       <div class="flex flex-col">
+        <div style="margin-bottom: 0.5rem">
+          <span class="new-measurement-title">
+            Add a New Measurement!
+          </span>
+        </div>
         <Inputtext placeholder="Name" v-model="measurementName" />
       </div>
     </template>
@@ -140,5 +145,12 @@ function submit() {
 /* make dropdown fill nicely */
 .category-dropdown {
   width: 100%;
+}
+
+.new-measurement-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--p-surface-700);
+  line-height: 1;
 }
 </style>

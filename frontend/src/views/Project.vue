@@ -13,8 +13,23 @@
   <div class="layout">
     <!-- space navigation menu -->
     <div class="space-menu left">
+      <div class="spaces-header">
+        <span class="spaces-title">Spaces</span>
+
+        <Button icon="pi pi-pencil" size="small" outlined aria-label="Edit" @click="toggleAddSpace" />
+      </div>
+
+      <OverlayPanel ref="overlayPanel">
+        <div class="add-space-popup">
+          <InputText v-model="newSpaceName" placeholder="New space name" @keyup.enter="handleAddSpace" autofocus />
+
+          <Button label="Add" size="small" severity="success" @click="handleAddSpace" />
+        </div>
+      </OverlayPanel>
       <Menu :model="spaceItems" />
     </div>
+
+
 
     <!-- measurement module section -->
     <div class="right">
@@ -39,7 +54,7 @@ import type { Measurement, Product, Project, Space } from "@/models";
 import MeasurementCardEdit from "@/components/MeasurementCardEdit.vue";
 import { useApi } from '@/composables/useApi';
 
-const { getProject, getProducts, createMeasurement, updateMeasurement, addProductToMeasurement } = useApi();
+const { getProject, getProducts, createMeasurement, updateMeasurement, addProductToMeasurement, createSpace } = useApi();
 
 const route = useRoute();
 const project = ref<Project | null>(null);
@@ -62,6 +77,17 @@ const spaceItems = computed(() =>
   }))
 )
 
+const overlayPanel = ref()
+const newSpaceName = ref('')
+
+const toggleAddSpace = (event: Event) => {
+  overlayPanel.value?.toggle(event)
+}
+
+const getcurrentSpace = () => {
+  return project.value?.spaces.find(space => space.id === currentSpace.value?.id);
+}
+
 async function loadProject() {
   const id = route.params.id;
   if (id) {
@@ -74,18 +100,14 @@ async function loadProducts() {
   allProducts.value = await getProducts();
 }
 
-const getcurrentSpace = () => {
-  return project.value?.spaces.find(space => space.id === currentSpace.value?.id);
-}
-
 async function handleCreateMeasurement(measurement: Partial<Measurement>) {
-  const newMeasurement = await createMeasurement(Number(currentSpace.value?.id), measurement);
+  const newMeasurement = await createMeasurement(Number(project.value?.id), Number(currentSpace.value?.id), measurement);
 
   project.value?.spaces.find(space => space.id === currentSpace.value?.id)?.measurements.push(newMeasurement)
 }
 
 function handleUpdateMeasurement(updated: Measurement) {
-  updateMeasurement(Number(currentSpace.value?.id), updated.id, updated);
+  updateMeasurement(Number(currentSpace.value?.id), Number(currentSpace.value?.id), updated.id, updated);
 
   const index = project.value?.spaces
     .find(space => space.id === currentSpace.value?.id)
@@ -99,17 +121,36 @@ function handleUpdateMeasurement(updated: Measurement) {
   }
 }
 
-function handleAddProduct(payload: { measurementId: number; product: Product }) {
+async function handleAddProduct(payload: { measurementId: number; product: Product }) {
 
-  addProductToMeasurement(Number(currentSpace.value?.id), payload.measurementId, payload.product);
+  const newProduct = await addProductToMeasurement(Number(currentSpace.value?.id), Number(currentSpace.value?.id), payload.measurementId, payload.product);
 
   const measurement = project.value?.spaces
     .find(space => space.id === currentSpace.value?.id)
     ?.measurements.find(m => m.id === payload.measurementId);
 
   if (measurement) {
-    measurement.products.push(payload.product);
+    measurement.products.push(newProduct);
   }
+}
+
+async function handleAddSpace() {
+  const name = newSpaceName.value.trim()
+  if (!name) return
+
+  const newSpace: Partial<Space> = {
+    name,
+    measurements: []
+  }
+
+  const spaceRes = await createSpace(Number(project.value?.id), newSpace)
+
+  project.value?.spaces.push(spaceRes)
+
+  currentSpace.value = spaceRes
+
+  newSpaceName.value = ''
+  overlayPanel.value?.hide()
 }
 
 </script>
@@ -146,5 +187,20 @@ function handleAddProduct(payload: { measurementId: number; product: Product }) 
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+}
+
+.spaces-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--p-surface-700);
+  line-height: 1;
+}
+
+.spaces-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: .5rem;
 }
 </style>

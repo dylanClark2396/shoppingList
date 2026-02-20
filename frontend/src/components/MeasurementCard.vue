@@ -1,8 +1,11 @@
 <template>
     <Card class="card">
         <template #title>
-            <div class="flex flex-col">
-                {{ props.measurement?.name }}
+            <div class="measurement-header">
+                <span class="measurement-title">
+                    {{ props.measurement?.name }}
+                </span>
+
                 <Button icon="pi pi-pencil" size="small" outlined severity="warning" aria-label="Edit" />
             </div>
         </template>
@@ -13,7 +16,7 @@
         <template #content>
             <!-- dynamic list of addable product -->
             <div style="margin-bottom: 0.5rem;">
-                <AutoComplete v-model="chosenProduct" @complete="search" forceSelection :suggestions="filteredProducts"
+                <AutoComplete v-model="chosenProduct" @complete="search" :suggestions="filteredProducts"
                     optionLabel="item" dataKey="sku" placeholder="Add Product" @option-select="addTolist" />
             </div>
             <Accordion :value="activePanels" multiple>
@@ -67,7 +70,7 @@
 <script setup lang="ts">
 import type { Measurement, Product } from '@/models';
 import type { AutoCompleteCompleteEvent } from 'primevue/autocomplete';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
     allProducts?: Product[];
@@ -75,37 +78,36 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'add-product', payload: { measurementId: number; product: Product }): void
+    (e: 'add-product', payload: { measurementId: number; product: Product }): void
 }>()
 
 const activePanels = ref<string[]>([])
 
-const chosenProduct = ref(null);
-const products = ref<Product[]>(props.allProducts ?? [])
+const chosenProduct = ref();
+
+const products = computed<Product[]>(() => props.allProducts ?? [])
+
 const filteredProducts = ref<Product[]>([])
 
-const search = (event: AutoCompleteCompleteEvent) => {
-    if (!event.query) {
-        filteredProducts.value = [...products.value]
-        return
-    }
+const search = ({ query }: AutoCompleteCompleteEvent) => {
+    const q = (query || '').trim().toLowerCase()
 
-    const lowerQuery = event.query.toLowerCase()
-
-    filteredProducts.value = products.value.filter(p =>
-        p.item?.toLowerCase().includes(lowerQuery)
-    )
+    filteredProducts.value = !q
+        ? [...products.value]
+        : products.value.filter(p =>
+            (p.item || '').toLowerCase().includes(q)
+        )
 }
 
 const addTolist = () => {
-  if (!chosenProduct.value || !props.measurement) return
+    if (!chosenProduct.value || !props.measurement) return
 
-  emit('add-product', {
-    measurementId: props.measurement.id,
-    product: chosenProduct.value
-  })
+    emit('add-product', {
+        measurementId: props.measurement.id,
+        product: chosenProduct.value
+    })
 
-  chosenProduct.value = null
+    chosenProduct.value = ''
 }
 </script>
 
@@ -118,5 +120,16 @@ const addTolist = () => {
     flex-direction: column;
     justify-content: space-between;
     padding: 1rem;
+}
+
+.measurement-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.measurement-title {
+    font-weight: 600;
 }
 </style>

@@ -72,9 +72,9 @@ async function handleCreateProject() {
   if (!newProjectName.value) return;
 
   const projectRes = await createProject({
-      name: newProjectName.value,
-      spaces: []
-    });
+    name: newProjectName.value,
+    spaces: []
+  });
 
   for (const spaceName of newSpaces.value) {
 

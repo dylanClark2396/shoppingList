@@ -28,6 +28,7 @@ declare module 'vue' {
     MeasurementCard: typeof import('./src/components/MeasurementCard.vue')['default']
     MeasurementCardEdit: typeof import('./src/components/MeasurementCardEdit.vue')['default']
     Menu: typeof import('primevue/menu')['default']
+    OverlayPanel: typeof import('primevue/overlaypanel')['default']
     PanelMenu: typeof import('primevue/panelmenu')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
