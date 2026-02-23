@@ -27,7 +27,7 @@
           <Button label="Add" outlined severity="success" @click="handleAddSpace" />
         </div>
       </Popover>
-      <Menu :model="spaceItems" />
+      <Menu :model="spaceItems"/>
     </div>
 
 
@@ -219,24 +219,24 @@ async function handleUpdateproductQuantity(payload: {
 
 .left {
   flex: 0 0 200px;
-  /* fixed sidebar */
 }
 
 .right {
   flex: 1;
 }
 
-/* Container for all cards */
 .cards-container {
+  padding: 1rem;
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
+  overflow-y: auto;
+  height: 85vh;
 }
 
 .spaces-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--p-surface-700);
   line-height: 1;
 }
 

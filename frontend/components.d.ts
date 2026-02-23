@@ -23,6 +23,7 @@ declare module 'vue' {
     Dropdown: typeof import('primevue/dropdown')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     Galleria: typeof import('primevue/galleria')['default']
+    IftaLabel: typeof import('primevue/iftalabel')['default']
     Image: typeof import('primevue/image')['default']
     InputChips: typeof import('primevue/inputchips')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']

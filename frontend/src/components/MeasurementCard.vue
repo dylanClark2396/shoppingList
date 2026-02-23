@@ -8,14 +8,20 @@
                     <span class="measurement-title">
                         {{ props.measurement?.name }}
                     </span>
-
-                    <Button icon="pi pi-pencil" size="small" outlined severity="warning" aria-label="Edit"
-                        @click="toggleEdit" />
+                    <div>
+                        <Button icon="pi pi-times" size="small" outlined severity="danger" aria-label="Remove"
+                            @click="console.log('removed')" style="margin-right: 1rem;" />
+                        <Button icon="pi pi-pencil" size="small" outlined severity="warning" aria-label="Edit"
+                            @click="toggleEdit" />
+                    </div>
                 </template>
 
                 <!-- EDIT MODE -->
                 <template v-else>
-                    <InputText v-model="editable.name" class="w-full" />
+                    <IftaLabel>
+                        <InputText id="name" v-model="editable.name" class="w-full" />
+                        <label for="name">Name</label>
+                    </IftaLabel>
 
                     <Button icon="pi pi-times" size="small" severity="danger" @click="toggleEdit" />
                     <Button icon="pi pi-check" size="small" severity="success" @click="saveMeasurementEdit" />
@@ -44,16 +50,30 @@
                 <div class="measurement-grid">
                     <!-- ROW 1 -->
                     <div class="measurement-row row-top">
-                        <InputNumber class="compact-input" placeholder="Quantity" v-model="editable.quantity" />
+                        <IftaLabel>
+                            <InputNumber id="quantity" class="compact-input" placeholder="Quantity"
+                                v-model="editable.quantity" />
+                            <label for="quantity">Quantity</label>
+                        </IftaLabel>
                         <Select v-model="editable.category" :options="categoryOptions" optionLabel="label"
                             optionValue="value" placeholder="Category" class="category-dropdown" />
                     </div>
 
                     <!-- ROW 2 -->
                     <div class="measurement-row row-bottom">
-                        <InputText class="compact-input" placeholder="Depth" v-model="editable.depth" />
-                        <InputText class="compact-input" placeholder="Width" v-model="editable.width" />
-                        <InputText class="compact-input" placeholder="Height" v-model="editable.height" />
+                        <IftaLabel>
+                            <InputText id="depth" class="compact-input" placeholder="Depth" v-model="editable.depth" />
+                            <label for="depth">Depth</label>
+                        </IftaLabel>
+                        <IftaLabel>
+                            <InputText id="width" class="compact-input" placeholder="Width" v-model="editable.width" />
+                            <label for="width">Width</label>
+                        </IftaLabel>
+                        <IftaLabel>
+                            <InputText id="height" class="compact-input" placeholder="Height"
+                                v-model="editable.height" />
+                            <label for="height">Height</label>
+                        </IftaLabel>
                     </div>
 
                     <div class="measurement-row">
@@ -160,7 +180,8 @@ const editable = reactive({
 
 const categoryOptions = [
     { label: 'Drawer', value: 'Drawer' },
-    { label: 'Cabinet', value: 'Cabinet' }
+    { label: 'Cabinet', value: 'Cabinet' },
+    { label: 'Shelf', value: 'Shelf' }
 ]
 
 const activePanels = ref<string[]>([])

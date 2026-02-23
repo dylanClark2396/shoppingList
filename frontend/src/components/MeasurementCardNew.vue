@@ -26,7 +26,7 @@
           <InputText class="compact-input" placeholder="Height" v-model="measurementHeight" />
         </div>
         <div>
-          <Textarea v-model="measurementNote" placeholder="Notes!" autoResize rows="5" cols="30"/>
+          <Textarea v-model="measurementNote" placeholder="Notes!" autoResize rows="5" cols="30" />
         </div>
       </div>
     </template>
@@ -63,7 +63,8 @@ const measurementNote = ref(props.measurement?.note ?? '')
 
 const categoryOptions = [
   { label: 'Drawer', value: 'Drawer' },
-  { label: 'Cabinet', value: 'Cabinet' }
+  { label: 'Cabinet', value: 'Cabinet' },
+  { label: 'Shelf', value: 'Shelf' }
 ]
 
 function buildMeasurement(): Partial<Measurement> {
@@ -99,7 +100,6 @@ function submit() {
     measurementHeight.value = null
     measurementCategory.value = ''
     measurementNote.value = ''
-
   }
 }
 
