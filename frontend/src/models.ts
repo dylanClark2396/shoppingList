@@ -30,12 +30,12 @@ export interface Project {
 export interface Product {
   sku: string;
   item: string;
-  dimensions?: string;
-  images?: string[];
-  price?: number;
-  vendor?: string;
+  dimensions: string;
+  images: string[];
+  price: number;
+  vendor: string;
   sheetName: string;
-  notes: string | null;
-  quantity?: number | null;
-  total?: number | null;
+  notes: string;
+  quantity: number;
+  total: number;
 }

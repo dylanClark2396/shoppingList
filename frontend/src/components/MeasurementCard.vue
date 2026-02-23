@@ -27,11 +27,16 @@
 
             <!-- DISPLAY MODE -->
             <template v-if="!isEditing">
-                {{ props.measurement?.quantity }},
-                {{ props.measurement?.dimensions?.depth }}x
-                {{ props.measurement?.dimensions?.width }}x
-                {{ props.measurement?.dimensions?.height }},
-                {{ props.measurement?.category }}
+                <div>
+                    {{ props.measurement?.quantity }},
+                    {{ props.measurement?.dimensions?.depth }} x
+                    {{ props.measurement?.dimensions?.width }} x
+                    {{ props.measurement?.dimensions?.height }},
+                    {{ props.measurement?.category }}
+                </div>
+                <div>
+                    {{ props.measurement?.note }}
+                </div>
             </template>
 
             <!-- EDIT MODE -->
@@ -49,6 +54,10 @@
                         <InputText class="compact-input" placeholder="Depth" v-model="editable.depth" />
                         <InputText class="compact-input" placeholder="Width" v-model="editable.width" />
                         <InputText class="compact-input" placeholder="Height" v-model="editable.height" />
+                    </div>
+
+                    <div class="measurement-row">
+                        <Textarea v-model="editable.note" placeholder="Notes!" autoResize rows="5" cols="30" />
                     </div>
                 </div>
             </template>
@@ -71,8 +80,8 @@
                 <AccordionPanel v-for="product in props.measurement?.products" :key="product.sku" :value="product.sku"
                     style="display: flex; justify-content:left;">
                     <AccordionHeader>
-                        <Button style="margin-right: .5rem;" icon="pi pi-times" severity="danger"
-                            @click.stop="handleRemove(product.sku)" />
+                        <Button style="margin-right: .5rem; max-width: 1.5rem;" outlined icon="pi pi-times"
+                            severity="danger" @click.stop="handleRemove(product.sku)" />
 
                         <span class="font-bold whitespace-nowrap">
                             {{ product.item }}
@@ -80,44 +89,37 @@
 
                     </AccordionHeader>
                     <AccordionContent>
-                        <div class="flex flex-col gap-4">
-
-                            <div class="flex justify-center">
-                                <Image v-for="value in product.images" v-if="product.images?.length" :src="'/' + value"
-                                    alt="Image" width="50" preview />
-                            </div>
-
-                            <!-- Tags Container -->
-                            <div class="flex flex-wrap gap-2">
-
-                                <Tag :value="`SKU: ${product.sku}`" severity="info" />
-                                <Tag :value="`$${product.price}`" severity="info" />
-
-                                <Tag v-if="product.vendor" :value="product.vendor" severity="info" />
-
-                                <Tag v-if="product.sheetName" :value="product.sheetName" severity="secondary" />
-
-                                <Tag v-if="product.dimensions" :value="product.dimensions" />
-
-                                <Tag v-if="product.quantity" :value="`Qty: ${product.quantity}`" severity="info" />
-
-                            </div>
-
-                            <!-- Notes -->
-                            <div v-if="product.notes">
-                                <Tag severity="secondary" icon="pi pi-comment" value="Notes" class="mb-2" />
-                                <div class="text-sm text-muted-color">
-                                    {{ product.notes }}
+                        <div class="accordion-row">
+                            <div class="accordion-left">
+                                <div class="flex items-start">
+                                    <InputNumber v-model="product.quantity" showButtons buttonLayout="vertical"
+                                        style="width: 3rem" size="small" :min="0" :max="99"
+                                        @update:model-value="val => handleProductUpdate(product.sku, val ?? 0)">
+                                        <template #incrementicon>
+                                            <span class="pi pi-plus" />
+                                        </template>
+                                        <template #decrementicon>
+                                            <span class="pi pi-minus" />
+                                        </template>
+                                    </InputNumber>
                                 </div>
                             </div>
+                            <div class="accordion-right">
+                                <div class="flex justify-center" v-if="product.images?.length">
+                                    <Image v-for="value in product.images" :key="value" :src="'/' + value" alt="Image"
+                                        width="50" preview />
+                                </div>
 
-                            <div style="margin-top: .5rem;">
-                                <FloatLabel variant="in">
-                                    <InputNumber id="quantity" v-model="product.quantity" />
-                                    <label for="quantity">Quantity</label>
-                                </FloatLabel>
+                                <div class="flex flex-wrap tag-spacing">
+                                    <Tag class="mr-2 mb-2" :value="`${product.sku}`" severity="info" />
+                                    <Tag class="mr-2 mb-2" :value="`$${product.price}`" severity="info" />
+                                    <Tag v-if="product.vendor" class="mr-2 mb-2" :value="product.vendor"
+                                        severity="info" />
+                                    <Tag v-if="product.sheetName" class="mr-2 mb-2" :value="product.sheetName"
+                                        severity="secondary" />
+                                    <Tag v-if="product.dimensions" class="mr-2 mb-2" :value="product.dimensions" />
+                                </div>
                             </div>
-
                         </div>
                     </AccordionContent>
                 </AccordionPanel>
@@ -138,7 +140,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'add-product', payload: { measurementId: number; product: Product }): void
-    (e: "remove-product", payload: { measurementId: number; sku: string }): void
+    (e: 'remove-product', payload: { measurementId: number; sku: string }): void
+    (e: 'update-product-quantity', payload: { measurementId: number; sku: string, updates: Partial<Product> }): void
     (e: 'update-measurement', value: Measurement): void
 }>()
 
@@ -151,7 +154,8 @@ const editable = reactive({
     depth: '',
     width: '',
     height: '',
-    category: ''
+    category: '',
+    note: ''
 })
 
 const categoryOptions = [
@@ -177,6 +181,7 @@ watch(
         editable.width = val.dimensions?.width ?? ''
         editable.height = val.dimensions?.height ?? ''
         editable.category = val.category ?? ''
+        editable.note = val.note ?? ''
     },
     { immediate: true }
 )
@@ -193,7 +198,8 @@ function saveMeasurementEdit() {
             depth: editable.depth,
             width: editable.width,
             height: editable.height
-        }
+        },
+        note: editable.note
     })
 
     isEditing.value = false
@@ -226,11 +232,20 @@ const handleAddTolist = () => {
 
 const handleRemove = (sku: string) => {
     if (!sku || !props.measurement) return
-    emit("remove-product", {
+    emit('remove-product', {
         measurementId: props.measurement.id,
         sku
     })
 }
+const handleProductUpdate = (sku: string, productQuantity: number) => {
+    if (!sku || !props.measurement) return
+    emit('update-product-quantity', {
+        measurementId: props.measurement.id,
+        sku,
+        updates: { 'quantity': productQuantity } as Partial<Product>
+    })
+}
+
 </script>
 
 <style scoped>
@@ -290,5 +305,30 @@ const handleRemove = (sku: string) => {
 /* make dropdown fill nicely */
 .category-dropdown {
     width: 100%;
+}
+
+.tag-spacing>* {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* optional: remove margin on last item in row */
+.tag-spacing>*:last-child {
+    margin-right: 0;
+}
+
+.accordion-row {
+    display: flex;
+    width: 100%;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.accordion-right {
+    flex: 1;
+}
+
+.accordion-left {
+    flex: 0 0 3rem;
 }
 </style>

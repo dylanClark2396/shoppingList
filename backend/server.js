@@ -317,6 +317,49 @@ app.delete(
   }
 );
 
+app.patch(
+  '/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products/:sku',
+  (req, res) => {
+    const projects = readJson(DATA_FILE, []);
+    const project = projects.find(p => p.id === Number(req.params.projectId));
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    const space = project.spaces?.find(
+      s => s.id === Number(req.params.spaceId)
+    );
+    if (!space) return res.status(404).json({ error: 'Space not found' });
+
+    const measurement = space.measurements?.find(
+      m => m.id === Number(req.params.measurementId)
+    );
+    if (!measurement)
+      return res.status(404).json({ error: 'Measurement not found' });
+
+    const product = measurement.products?.find(
+      p => p.sku === req.params.sku
+    );
+    if (!product)
+      return res.status(404).json({ error: 'Product not found' });
+
+    const updates = req.body;
+
+    if (!updates || Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No updates provided' });
+    }
+
+    // Prevent immutable fields
+    if ('sku' in updates) {
+      return res.status(400).json({ error: 'Cannot update SKU' });
+    }
+
+    Object.assign(product, updates);
+
+    writeJsonAtomic(DATA_FILE, projects);
+
+    res.json({ status: 'ok', product });
+  }
+);
+
 // =========================
 // 🛍 PRODUCTS MASTER LIST
 // =========================

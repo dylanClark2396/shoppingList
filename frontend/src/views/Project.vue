@@ -21,7 +21,8 @@
 
       <Popover ref="popover">
         <div class="add-space-popup">
-          <InputText v-model="newSpaceName" placeholder="New space name" @keyup.enter="handleAddSpace" style="margin-right: .5rem;" />
+          <InputText v-model="newSpaceName" placeholder="New space name" @keyup.enter="handleAddSpace"
+            style="margin-right: .5rem;" />
 
           <Button label="Add" outlined severity="success" @click="handleAddSpace" />
         </div>
@@ -38,7 +39,8 @@
           @update-measurement="handleUpdateMeasurement" />
         <div v-for="value in getcurrentSpace()?.measurements">
           <MeasurementCard :measurement="value" :all-products="allProducts" @add-product="handleAddProduct"
-            @remove-product="handleRemoveProduct" @update-measurement="handleUpdateMeasurement" />
+            @remove-product="handleRemoveProduct" @update-measurement="handleUpdateMeasurement"
+            @update-product-quantity="handleUpdateproductQuantity" />
         </div>
       </div>
     </div>
@@ -55,7 +57,7 @@ import type { Measurement, Product, Project, Space } from "@/models";
 import { useApi } from '@/composables/useApi';
 import MeasurementCardNew from "@/components/MeasurementCardNew.vue";
 
-const { getProject, getProducts, createMeasurement, updateMeasurement, addProductToMeasurement, createSpace, removeProductFromMeasurement, } = useApi();
+const { getProject, getProducts, createMeasurement, updateMeasurement, addProductToMeasurement, createSpace, removeProductFromMeasurement, updateProduct } = useApi();
 
 const route = useRoute();
 const project = ref<Project | null>(null);
@@ -173,6 +175,27 @@ async function handleAddSpace() {
   popover.value?.hide()
 }
 
+async function handleUpdateproductQuantity(payload: {
+  measurementId: number,
+  sku: string
+  updates: Partial<Product>
+}) {
+  if (!project.value || !currentSpace.value) return
+
+  const updateRes = await updateProduct(Number(project.value?.id), Number(currentSpace.value?.id), payload.measurementId, payload.sku, payload.updates)
+
+  const measurement = project.value?.spaces
+    .find(space => space.id === currentSpace.value?.id)
+    ?.measurements.find(m => m.id === payload.measurementId);
+
+
+  if (!measurement || !measurement.products) return
+
+  measurement.products = measurement.products.map(p =>
+    p.sku === payload.sku ? updateRes : p
+  )
+
+}
 
 </script>
 

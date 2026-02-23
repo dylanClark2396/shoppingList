@@ -66,10 +66,6 @@ const categoryOptions = [
   { label: 'Cabinet', value: 'Cabinet' }
 ]
 
-const fractonOptions = [{
-  label: '0', value: 0
-}]
-
 function buildMeasurement(): Partial<Measurement> {
   const measurement: Partial<Measurement> = {
     name: measurementName.value,
@@ -111,8 +107,8 @@ function submit() {
 
 <style scoped>
 .card {
-  width: 10rem;
   max-width: 25rem;
+  height: 25rem;
   --p-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
   flex: 1 1 250px;
   display: flex;

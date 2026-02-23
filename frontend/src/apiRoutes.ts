@@ -46,6 +46,14 @@ export const API_ROUTES = {
   ) =>
     `${API_BASE_URL}/projects/${projectId}/spaces/${spaceId}/measurements/${measurementId}/products/${sku}`,
 
+  updateProduct: (
+    projectId: number,
+    spaceId: number,
+    measurementId: number,
+    sku: string
+  ) =>
+    `${API_BASE_URL}/projects/${projectId}/spaces/${spaceId}/measurements/${measurementId}/products/${sku}`,
+
   // ========================
   // 🛍 Master Products
   // ========================

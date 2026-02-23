@@ -37,12 +37,18 @@ def clean_columns(df):
     return df
 
 
-def clean_value(val):
+def clean_value(val, key=None):
     if pd.isna(val):
         return None
 
     if isinstance(val, pd.Timestamp):
         return val.isoformat()
+
+    # Special handling for SKU column
+    if key == SKU_COLUMN:
+        if isinstance(val, float) and val.is_integer():
+            return str(int(val))
+        return str(val).strip()
 
     if isinstance(val, float) and val.is_integer():
         return str(int(val))
@@ -225,8 +231,6 @@ def process():
         if SKU_COLUMN not in df.columns:
             continue
 
-        df[SKU_COLUMN] = df[SKU_COLUMN].apply(clean_value)
-
         row_image_map = map_images_to_rows(temp_dir, sheet_idx)
 
         df["excel_row"] = df.index + 2
@@ -256,7 +260,7 @@ def process():
                     if key in ["images", "sheet_names"]:
                         continue
 
-                    record[key] = clean_value(value)
+                    record[key] = clean_value(value, key)
 
                 record["sheet_names"] = [sheet_name]
                 record["images"] = []

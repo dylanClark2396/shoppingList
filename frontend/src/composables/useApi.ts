@@ -168,6 +168,26 @@ export function useApi() {
     }
   }
 
+  const updateProduct = async (
+  projectId: number,
+  spaceId: number,
+  measurementId: number,
+  sku: string,
+  updates: Partial<Product>
+): Promise<Product> => {
+  const res = await fetch(
+    API_ROUTES.updateProduct(projectId, spaceId, measurementId, sku),
+    {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    }
+  )
+
+  const data = await safeJson<{ product: Product }>(res)
+  return data.product
+}
+
   // ========================
   // 🛍 Master Products
   // ========================
@@ -193,6 +213,7 @@ export function useApi() {
     updateMeasurement,
     addProductToMeasurement,
     removeProductFromMeasurement,
+    updateProduct,
     getProducts,
     getProduct,
   }
