@@ -10,7 +10,7 @@
         <Inputtext placeholder="Name" v-model="measurementName" />
       </div>
     </template>
-    <template #subtitle class="measurement-grid">
+    <template #content>
       <div class="measurement-grid">
         <!-- ROW 1 -->
         <div class="measurement-row row-top">
@@ -21,9 +21,12 @@
 
         <!-- ROW 2 -->
         <div class="measurement-row row-bottom">
-          <InputNumber class="compact-input" placeholder="Depth" v-model="measurementDepth" />
-          <InputNumber class="compact-input" placeholder="Width" v-model="measurementWidth" />
-          <InputNumber class="compact-input" placeholder="Height" v-model="measurementHeight" />
+          <InputText class="compact-input" placeholder="Depth" v-model="measurementDepth" />
+          <InputText class="compact-input" placeholder="Width" v-model="measurementWidth" />
+          <InputText class="compact-input" placeholder="Height" v-model="measurementHeight" />
+        </div>
+        <div>
+          <Textarea v-model="measurementNote" placeholder="Notes!" autoResize rows="5" cols="30"/>
         </div>
       </div>
     </template>
@@ -55,11 +58,17 @@ const measurementDepth = ref(props.measurement?.dimensions?.depth ?? null)
 const measurementWidth = ref(props.measurement?.dimensions?.width ?? null)
 const measurementHeight = ref(props.measurement?.dimensions?.height ?? null)
 const measurementCategory = ref(props.measurement?.category ?? '')
+const measurementNote = ref(props.measurement?.note ?? '')
+
 
 const categoryOptions = [
-  { label: 'Drawer', value: 'drawer' },
-  { label: 'Cabinet', value: 'cabinet' }
+  { label: 'Drawer', value: 'Drawer' },
+  { label: 'Cabinet', value: 'Cabinet' }
 ]
+
+const fractonOptions = [{
+  label: '0', value: 0
+}]
 
 function buildMeasurement(): Partial<Measurement> {
   const measurement: Partial<Measurement> = {
@@ -70,7 +79,8 @@ function buildMeasurement(): Partial<Measurement> {
       depth: measurementDepth.value,
       width: measurementWidth.value,
       height: measurementHeight.value
-    }
+    },
+    note: measurementNote.value
   }
   if (isEditMode.value) {
     measurement.id = props.measurement?.id
@@ -92,6 +102,8 @@ function submit() {
     measurementWidth.value = null
     measurementHeight.value = null
     measurementCategory.value = ''
+    measurementNote.value = ''
+
   }
 }
 
@@ -101,7 +113,6 @@ function submit() {
 .card {
   width: 10rem;
   max-width: 25rem;
-  height: 270px;
   --p-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
   flex: 1 1 250px;
   display: flex;
@@ -135,10 +146,10 @@ function submit() {
 
 /* compact numeric inputs */
 .compact-input {
-  max-width: 140px;
+  max-width: 100px;
 }
 
-.compact-input :deep(.p-inputnumber-input) {
+.compact-input :deep(.p-inputtext) {
   width: 100%;
 }
 

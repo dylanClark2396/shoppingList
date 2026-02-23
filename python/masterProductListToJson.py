@@ -2,21 +2,17 @@ import pandas as pd
 import os
 import json
 import re
-import hashlib
-import xlwings as xw
+import zipfile
+import shutil
+import xml.etree.ElementTree as ET
 
 # ========= CONFIG =========
 EXCEL_FILE = "MasterProductList.xlsx"
 OUTPUT_DIR = "output"
 IMAGE_DIR = os.path.join(OUTPUT_DIR, "images")
-SKU_COLUMN = "sku_number"
-VISIBLE_EXCEL = False
+SKU_COLUMN = "sku"
 # ==========================
 
-
-# --------------------------
-# Helpers
-# --------------------------
 
 def slugify(text):
     return re.sub(r'[^a-zA-Z0-9_-]', '_', str(text))
@@ -27,8 +23,15 @@ def ensure_dirs():
 
 
 def clean_columns(df):
+    """
+    Normalize column names and alias sku_number → sku
+    """
     df.columns = [
-        col.strip().lower().replace(" ", "_").replace("#", "number")
+        col.strip()
+        .lower()
+        .replace(" ", "_")
+        .replace("#", "number")
+        .replace("sku_number", "sku")
         for col in df.columns
     ]
     return df
@@ -37,71 +40,162 @@ def clean_columns(df):
 def clean_value(val):
     if pd.isna(val):
         return None
+
     if isinstance(val, pd.Timestamp):
         return val.isoformat()
+
     if isinstance(val, float) and val.is_integer():
         return str(int(val))
+
     return val
 
 
-def file_hash(path):
-    with open(path, "rb") as f:
-        return hashlib.md5(f.read()).hexdigest()
+# --------------------------
+# Extract workbook to temp
+# --------------------------
+
+def unzip_xlsx():
+    temp_dir = "temp_extract"
+
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+
+    with zipfile.ZipFile(EXCEL_FILE, 'r') as zip_ref:
+        zip_ref.extractall(temp_dir)
+
+    return temp_dir
 
 
 # --------------------------
-# IMAGE EXTRACTION
+# Map sheet → row → image path
 # --------------------------
 
-def extract_images(sheet, sku_lookup):
-    image_map = {}
-    seen_hashes = {}
+def map_images_to_rows(temp_dir, sheet_index):
+    """
+    Returns dict: {excel_row_number: image_file_path}
+    """
 
-    shapes = sheet.api.Shapes
-    print(f"Shapes found: {shapes.Count}")
+    ns = {
+        "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
+        "xdr": "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing",
+        "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    }
 
-    for i in range(1, shapes.Count + 1):
-        shape = shapes.Item(i)
+    sheet_path = os.path.join(
+        temp_dir, "xl", "worksheets", f"sheet{sheet_index}.xml"
+    )
 
-        try:
-            if shape.Type == 13:  # msoPicture
-                row = shape.TopLeftCell.Row
+    if not os.path.exists(sheet_path):
+        return {}
 
-                if row not in sku_lookup:
-                    continue
+    tree = ET.parse(sheet_path)
+    root = tree.getroot()
 
-                sku = slugify(sku_lookup[row])
+    drawing_rel_id = None
 
-                # Determine filename (clean numbering per SKU)
-                count = len(image_map.get(row, [])) + 1
-                filename = f"{sku}.png" if count == 1 else f"{sku}_{count}.png"
-                path = os.path.abspath(os.path.join(IMAGE_DIR, filename))
+    for elem in root.iter():
+        if "drawing" in elem.tag:
+            drawing_rel_id = elem.attrib.get(
+                "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+            )
 
-                # Export image via chart trick
-                shape.Copy()
-                chart = sheet.api.ChartObjects().Add(0, 0, shape.Width, shape.Height)
-                chart.Chart.Paste()
-                chart.Chart.Export(path)
-                chart.Delete()
+    if not drawing_rel_id:
+        return {}
 
-                # Deduplicate
-                img_hash = file_hash(path)
+    rels_path = os.path.join(
+        temp_dir,
+        "xl",
+        "worksheets",
+        "_rels",
+        f"sheet{sheet_index}.xml.rels"
+    )
 
-                if img_hash in seen_hashes:
-                    os.remove(path)
-                    final_filename = seen_hashes[img_hash]
-                else:
-                    seen_hashes[img_hash] = filename
-                    final_filename = filename
+    if not os.path.exists(rels_path):
+        return {}
 
-                image_map.setdefault(row, []).append(f"images/{final_filename}")
+    rel_tree = ET.parse(rels_path)
+    rel_root = rel_tree.getroot()
 
-                print(f"  ✔ Image exported for SKU {sku}")
+    drawing_file = None
 
-        except Exception as e:
-            print(f"  ✖ Failed on shape {i}: {e}")
+    for rel in rel_root:
+        if rel.attrib.get("Id") == drawing_rel_id:
+            drawing_file = rel.attrib.get("Target")
 
-    return image_map
+    if not drawing_file:
+        return {}
+
+    drawing_path = os.path.normpath(
+        os.path.join(temp_dir, "xl", drawing_file.replace("../", ""))
+    )
+
+    if not os.path.exists(drawing_path):
+        return {}
+
+    drawing_tree = ET.parse(drawing_path)
+    drawing_root = drawing_tree.getroot()
+
+    drawing_rels_path = os.path.join(
+        os.path.dirname(drawing_path),
+        "_rels",
+        os.path.basename(drawing_path) + ".rels"
+    )
+
+    if not os.path.exists(drawing_rels_path):
+        return {}
+
+    drawing_rels_tree = ET.parse(drawing_rels_path)
+    drawing_rels_root = drawing_rels_tree.getroot()
+
+    rel_map = {
+        rel.attrib["Id"]: rel.attrib["Target"]
+        for rel in drawing_rels_root
+    }
+
+    row_image_map = {}
+
+    anchors = (
+        drawing_root.findall(".//xdr:twoCellAnchor", ns) +
+        drawing_root.findall(".//xdr:oneCellAnchor", ns)
+    )
+
+    for anchor in anchors:
+
+        from_node = anchor.find("xdr:from", ns)
+        if from_node is None:
+            continue
+
+        row_elem = from_node.find("xdr:row", ns)
+        if row_elem is None:
+            continue
+
+        text_value = row_elem.text
+        if not text_value:
+            continue
+
+        row_number = int(text_value.strip()) + 1
+
+        blip = anchor.find(".//a:blip", ns)
+        if blip is None:
+            continue
+
+        rel_id = blip.attrib.get(
+            "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed"
+        )
+
+        if rel_id not in rel_map:
+            continue
+
+        image_target = rel_map[rel_id]
+
+        image_path = os.path.normpath(
+            os.path.join(temp_dir, "xl", image_target.replace("../", ""))
+        )
+
+        if os.path.exists(image_path):
+            row_image_map[row_number] = image_path
+
+    return row_image_map
 
 
 # --------------------------
@@ -111,21 +205,14 @@ def extract_images(sheet, sku_lookup):
 def process():
     ensure_dirs()
 
-    print("Opening Excel...")
+    print("Unzipping workbook...")
+    temp_dir = unzip_xlsx()
 
-    app = xw.App(visible=VISIBLE_EXCEL)
+    sku_index = {}
 
-    # 🚀 Speed optimizations
-    app.screen_updating = False
-    app.display_alerts = False
-    app.calculation = 'manual'
+    xls = pd.ExcelFile(EXCEL_FILE)
 
-    wb = app.books.open(EXCEL_FILE)
-
-    combined_records = []
-
-    for sheet in wb.sheets:
-        sheet_name = sheet.name
+    for sheet_idx, sheet_name in enumerate(xls.sheet_names, start=1):
 
         print("\n==============================")
         print(f"Processing Sheet: {sheet_name}")
@@ -136,63 +223,88 @@ def process():
         df.dropna(how="all", inplace=True)
 
         if SKU_COLUMN not in df.columns:
-            print("  ⚠ SKU column not found — skipping")
             continue
 
         df[SKU_COLUMN] = df[SKU_COLUMN].apply(clean_value)
 
-        # Remove rows without SKU
-        df = df[df[SKU_COLUMN].notna() & (df[SKU_COLUMN] != "")]
-
-        if df.empty:
-            print("  ⚠ No valid SKU rows")
-            continue
+        row_image_map = map_images_to_rows(temp_dir, sheet_idx)
 
         df["excel_row"] = df.index + 2
 
-        # Build row → SKU lookup
-        sku_lookup = {
-            int(row["excel_row"]): row[SKU_COLUMN]
-            for _, row in df.iterrows()
-        }
-
-        print("Extracting images...")
-        image_map = extract_images(sheet, sku_lookup)
-
-        # Remove legacy image columns
-        df.drop(columns=["image", "image_local", "images"],
-                inplace=True,
-                errors="ignore")
-
         for _, row in df.iterrows():
+
             excel_row = int(row["excel_row"])
+            sku = row[SKU_COLUMN]
 
-            record = {
-                key: clean_value(value)
-                for key, value in row.items()
-                if key != "excel_row"
-            }
+            if pd.isna(sku):
+                continue
 
-            record["sheet_name"] = sheet_name
-            record["images"] = image_map.get(excel_row, [])
+            sku = str(sku).strip()
+            if not sku:
+                continue
 
-            combined_records.append(record)
+            slug_sku = slugify(sku)
+
+            if sku not in sku_index:
+
+                record = {}
+
+                for key, value in row.items():
+                    if key == "excel_row":
+                        continue
+
+                    if key in ["images", "sheet_names"]:
+                        continue
+
+                    record[key] = clean_value(value)
+
+                record["sheet_names"] = [sheet_name]
+                record["images"] = []
+
+                sku_index[sku] = record
+
+            else:
+                record = sku_index[sku]
+
+                if not isinstance(record.get("sheet_names"), list):
+                    record["sheet_names"] = []
+
+                if not isinstance(record.get("images"), list):
+                    record["images"] = []
+
+                if sheet_name not in record["sheet_names"]:
+                    record["sheet_names"].append(sheet_name)
+
+            if excel_row in row_image_map:
+                source_image = row_image_map[excel_row]
+                ext = os.path.splitext(source_image)[1]
+
+                image_count = len(record["images"]) + 1
+
+                filename = (
+                    f"{slug_sku}{ext}"
+                    if image_count == 1
+                    else f"{slug_sku}_{image_count}{ext}"
+                )
+
+                dest_path = os.path.join(IMAGE_DIR, filename)
+                shutil.copy(source_image, dest_path)
+
+                record["images"].append(f"images/{filename}")
 
         print(f"  ✔ {len(df)} rows processed")
 
-    wb.close()
-    app.quit()
+    shutil.rmtree(temp_dir)
 
     output_json = os.path.join(OUTPUT_DIR, "data.json")
 
     print("\nWriting combined JSON...")
+
     with open(output_json, "w", encoding="utf-8") as f:
-        json.dump(combined_records, f, indent=2, ensure_ascii=False)
+        json.dump(list(sku_index.values()), f, indent=2, ensure_ascii=False)
 
     print("\nDONE.")
-    print("JSON saved to:", output_json)
-    print("Images saved to:", IMAGE_DIR)
-    print("Total records:", len(combined_records))
+    print("Total unique SKUs:", len(sku_index))
 
 
 if __name__ == "__main__":

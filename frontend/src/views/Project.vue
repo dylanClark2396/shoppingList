@@ -4,8 +4,8 @@
     <span class="topbar-title">
       {{ project?.name }} - {{ currentSpace?.name }}
     </span>
-    <div>
-      <Button label="back" outlined text size="large" @click="router.push('/')" />
+    <div style="margin-left: 1rem;">
+      <Button label="Back" outlined size="large" @click="router.push('/')" />
     </div>
   </div>
 
@@ -16,16 +16,16 @@
       <div class="spaces-header">
         <span class="spaces-title">Spaces</span>
 
-        <Button icon="pi pi-pencil" size="small" outlined aria-label="Edit" @click="toggleAddSpace" />
+        <Button icon="pi pi-pencil" size="small" outlined aria-label="Edit" @click="toggleSpaceEditPopover" />
       </div>
 
-      <OverlayPanel ref="overlayPanel">
+      <Popover ref="popover">
         <div class="add-space-popup">
-          <InputText v-model="newSpaceName" placeholder="New space name" @keyup.enter="handleAddSpace" autofocus />
+          <InputText v-model="newSpaceName" placeholder="New space name" @keyup.enter="handleAddSpace" style="margin-right: .5rem;" />
 
-          <Button label="Add" size="small" severity="success" @click="handleAddSpace" />
+          <Button label="Add" outlined severity="success" @click="handleAddSpace" />
         </div>
-      </OverlayPanel>
+      </Popover>
       <Menu :model="spaceItems" />
     </div>
 
@@ -34,10 +34,11 @@
     <!-- measurement module section -->
     <div class="right">
       <div class="cards-container">
-        <MeasurementCardEdit @create-measurement="handleCreateMeasurement"
+        <MeasurementCardNew @create-measurement="handleCreateMeasurement"
           @update-measurement="handleUpdateMeasurement" />
         <div v-for="value in getcurrentSpace()?.measurements">
-          <MeasurementCard :measurement="value" :all-products="allProducts" @add-product="handleAddProduct" />
+          <MeasurementCard :measurement="value" :all-products="allProducts" @add-product="handleAddProduct"
+            @remove-product="handleRemoveProduct" @update-measurement="handleUpdateMeasurement" />
         </div>
       </div>
     </div>
@@ -51,10 +52,10 @@ import MeasurementCard from "@/components/MeasurementCard.vue";
 import router from "@/router";
 import { useRoute } from "vue-router";
 import type { Measurement, Product, Project, Space } from "@/models";
-import MeasurementCardEdit from "@/components/MeasurementCardEdit.vue";
 import { useApi } from '@/composables/useApi';
+import MeasurementCardNew from "@/components/MeasurementCardNew.vue";
 
-const { getProject, getProducts, createMeasurement, updateMeasurement, addProductToMeasurement, createSpace } = useApi();
+const { getProject, getProducts, createMeasurement, updateMeasurement, addProductToMeasurement, createSpace, removeProductFromMeasurement, } = useApi();
 
 const route = useRoute();
 const project = ref<Project | null>(null);
@@ -77,12 +78,13 @@ const spaceItems = computed(() =>
   }))
 )
 
-const overlayPanel = ref()
-const newSpaceName = ref('')
 
-const toggleAddSpace = (event: Event) => {
-  overlayPanel.value?.toggle(event)
-}
+const toggleSpaceEditPopover = (event: any) => {
+  popover.value?.toggle(event);
+};
+
+const popover = ref();
+const newSpaceName = ref('')
 
 const getcurrentSpace = () => {
   return project.value?.spaces.find(space => space.id === currentSpace.value?.id);
@@ -107,7 +109,7 @@ async function handleCreateMeasurement(measurement: Partial<Measurement>) {
 }
 
 function handleUpdateMeasurement(updated: Measurement) {
-  updateMeasurement(Number(currentSpace.value?.id), Number(currentSpace.value?.id), updated.id, updated);
+  updateMeasurement(Number(project.value?.id), Number(currentSpace.value?.id), updated.id, updated);
 
   const index = project.value?.spaces
     .find(space => space.id === currentSpace.value?.id)
@@ -123,7 +125,7 @@ function handleUpdateMeasurement(updated: Measurement) {
 
 async function handleAddProduct(payload: { measurementId: number; product: Product }) {
 
-  const newProduct = await addProductToMeasurement(Number(currentSpace.value?.id), Number(currentSpace.value?.id), payload.measurementId, payload.product);
+  const newProduct = await addProductToMeasurement(Number(project.value?.id), Number(currentSpace.value?.id), payload.measurementId, payload.product);
 
   const measurement = project.value?.spaces
     .find(space => space.id === currentSpace.value?.id)
@@ -131,6 +133,24 @@ async function handleAddProduct(payload: { measurementId: number; product: Produ
 
   if (measurement) {
     measurement.products.push(newProduct);
+  }
+
+}
+
+async function handleRemoveProduct(payload: {
+  measurementId: number,
+  sku: string
+}) {
+  await removeProductFromMeasurement(Number(project.value?.id), Number(currentSpace.value?.id), payload.measurementId, payload.sku)
+
+  const measurement = project.value?.spaces
+    .find(space => space.id === currentSpace.value?.id)
+    ?.measurements.find(m => m.id === payload.measurementId);
+
+  if (measurement?.products) {
+    measurement.products = measurement.products.filter(
+      p => p.sku !== payload.sku
+    )
   }
 }
 
@@ -150,8 +170,9 @@ async function handleAddSpace() {
   currentSpace.value = spaceRes
 
   newSpaceName.value = ''
-  overlayPanel.value?.hide()
+  popover.value?.hide()
 }
+
 
 </script>
 

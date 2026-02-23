@@ -1,7 +1,7 @@
 export interface Dimension {
-  depth: number | null;
-  width: number | null;
-  height: number | null;
+  depth: string | null;
+  width: string | null;
+  height: string | null;
 }
 
 export interface Measurement {
@@ -11,6 +11,8 @@ export interface Measurement {
   dimensions: Dimension | null;
   category: string | null;
   products: Product[];
+  note: string;
+  images: string[];
 }
 
 export interface Space {
