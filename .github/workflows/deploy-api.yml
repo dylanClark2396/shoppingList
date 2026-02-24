@@ -59,12 +59,14 @@ jobs:
             --query "Command.CommandId" \
             --output text \
             --parameters 'commands=[
-              "whoami",
-              "pwd",
-              "mkdir -p /home/ec2-user/apps",
-              "ls -lah /home/ec2-user/apps || true",
-              "aws s3 ls s3://${{ secrets.DEPLOY_BUCKET }}",
-              "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip /home/ec2-user/apps/"
+              "cd /home/ec2-user/apps",
+              "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip .",
+              "rm -rf api",
+              "mkdir api",
+              "unzip api-release.zip -d api",
+              "cd api",
+              "npm install --omit=dev",
+              "pm2 restart api || pm2 start dist/server.js --name api"
             ]')
 
           echo "Command ID: $COMMAND_ID"
