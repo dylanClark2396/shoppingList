@@ -26,7 +26,7 @@ jobs:
 
       - name: Create deployment archive (dist only)
         run: |
-          zip -r api-release.zip package.json dist/
+          zip -r api-release.zip backend/package.json backend/dist/
 
       - name: Setup SSH key
         run: |
