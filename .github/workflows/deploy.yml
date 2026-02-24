@@ -1,68 +1,91 @@
-name: Deploy Express API
+name: Deploy Express Backend (SSM + OIDC)
 
 on:
   push:
     branches:
       - main
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # ------------------------------------------------
+      # Checkout repo
+      # ------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ------------------------------------------------
+      # Setup Node
+      # ------------------------------------------------
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
 
+      # ------------------------------------------------
+      # Setup pnpm
+      # ------------------------------------------------
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 8
 
-      - name: Install dependencies and build backend
+      # ------------------------------------------------
+      # Install + Build Backend
+      # Backend is located in /backend
+      # ------------------------------------------------
+      - name: Install and build backend
         run: |
           cd backend
           pnpm install
           pnpm run build
 
-      - name: Create deployment archive (backend dist only)
+      # ------------------------------------------------
+      # Package deployment artifact
+      # Only ship runtime bundle
+      # ------------------------------------------------
+      - name: Create deployment archive
         run: |
           cd backend
           zip -r ../api-release.zip package.json dist/
 
-      - name: Setup SSH key
+      # ------------------------------------------------
+      # Configure AWS credentials using OIDC
+      # ------------------------------------------------
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE }}
+          aws-region: us-east-1
+
+      # ------------------------------------------------
+      # Upload artifact to S3
+      # ------------------------------------------------
+      - name: Upload artifact to S3
         run: |
-          echo "${{ secrets.SSH_KEY }}" > key.pem
-          chmod 600 key.pem
+          aws s3 cp api-release.zip s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip
 
-      - name: Upload artifact to EC2
+      # ------------------------------------------------
+      # Deploy via AWS SSM
+      # ------------------------------------------------
+      - name: Deploy via SSM
         run: |
-          scp -o StrictHostKeyChecking=no \
-          -i key.pem \
-          api-release.zip \
-          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/
-
-      - name: Deploy on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no \
-          -i key.pem \
-          ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-
-          cd /home/${{ secrets.EC2_USER }}/apps
-
-          rm -rf api
-          mkdir api
-
-          unzip ../api-release.zip -d api
-
-          cd api
-
-          npm install --omit=dev
-
-          pm2 restart api || pm2 start dist/server.js --name api
-
-          EOF
+          aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "cd /home/ec2-user/apps",
+              "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip .",
+              "rm -rf api",
+              "mkdir api",
+              "unzip api-release.zip -d api",
+              "cd api",
+              "npm install --omit=dev",
+              "pm2 restart api || pm2 start dist/server.js --name api"
+            ]'
