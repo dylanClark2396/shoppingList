@@ -53,9 +53,11 @@ jobs:
 
       - name: Deploy via SSM
         run: |
-          aws ssm send-command \
+          COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
+            --query "Command.CommandId" \
+            --output text \
             --parameters 'commands=[
               "cd /home/ec2-user/apps",
               "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip .",
@@ -65,4 +67,14 @@ jobs:
               "cd api",
               "npm install --omit=dev",
               "pm2 restart api || pm2 start dist/server.js --name api"
-            ]'
+            ]')
+
+          echo "Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id $COMMAND_ID \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
+
+          aws ssm get-command-invocation \
+            --command-id $COMMAND_ID \
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
