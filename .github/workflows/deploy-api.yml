@@ -14,66 +14,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ------------------------------------------------
-      # Checkout repo
-      # ------------------------------------------------
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ------------------------------------------------
-      # Setup Node
-      # ------------------------------------------------
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # ------------------------------------------------
-      # Setup pnpm
-      # ------------------------------------------------
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 8
 
-      # ------------------------------------------------
-      # Install + Build Backend
-      # Backend is located in /backend
-      # ------------------------------------------------
       - name: Install and build backend
         run: |
           cd backend
           pnpm install
           pnpm run build
 
-      # ------------------------------------------------
-      # Package deployment artifact
-      # Only ship runtime bundle
-      # ------------------------------------------------
       - name: Create deployment archive
         run: |
           cd backend
           zip -r ../api-release.zip package.json dist/
 
-      # ------------------------------------------------
-      # Configure AWS credentials using OIDC
-      # ------------------------------------------------
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE }}
           aws-region: us-east-2
 
-      # ------------------------------------------------
-      # Upload artifact to S3
-      # ------------------------------------------------
       - name: Upload artifact to S3
         run: |
           aws s3 cp api-release.zip s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip
 
-      # ------------------------------------------------
-      # Deploy via AWS SSM
-      # ------------------------------------------------
       - name: Deploy via SSM
         run: |
           aws ssm send-command \
