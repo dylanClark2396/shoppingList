@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'
 
 permissions:
   id-token: write
@@ -29,15 +31,14 @@ jobs:
           version: 8
 
       - name: Install and build backend
+        working-directory: backend
         run: |
-          cd backend
           pnpm install
           pnpm run build
 
       - name: Create deployment archive
-        run: |
-          cd backend
-          zip -r ../api-release.zip package.json dist/
+        working-directory: backend
+        run: zip -r ../api-release.zip package.json dist/
 
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
