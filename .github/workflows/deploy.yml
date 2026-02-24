@@ -18,15 +18,16 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build production bundle
-        run: npm run build
-
-      - name: Create deployment archive (dist only)
+      - name: Install dependencies and build backend
         run: |
-          zip -r api-release.zip backend/package.json backend/dist/
+          cd backend
+          pnpm install
+          pnpm run build
+
+      - name: Create deployment archive (backend dist only)
+        run: |
+          cd backend
+          zip -r ../api-release.zip package.json dist/
 
       - name: Setup SSH key
         run: |
@@ -51,7 +52,7 @@ jobs:
           rm -rf api
           mkdir api
 
-          unzip api-release.zip -d api
+          unzip ../api-release.zip -d api
 
           cd api
 
