@@ -62,8 +62,11 @@ jobs:
               "cd /home/ec2-user/apps",
               "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip .",
               "rm -rf api",
-              "mkdir api",
-              "unzip api-release.zip -d api",
+              "mkdir -p /home/ec2-user/apps/api",
+              "cd /home/ec2-user/apps",
+              "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip .",
+              "rm -rf api/*",
+              "unzip -o api-release.zip -d api",
               "cd api",
               "npm install --omit=dev",
               "pm2 restart api || pm2 start dist/server.js --name api"
