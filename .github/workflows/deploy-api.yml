@@ -58,6 +58,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --query "Command.CommandId" \
             --output text \
+            --execution-user ec2-user \
             --parameters 'commands=[
               "cd /home/ec2-user/apps",
               "rm -rf api",
