@@ -59,14 +59,10 @@ jobs:
             --query "Command.CommandId" \
             --output text \
             --parameters 'commands=[
-              "export NVM_DIR=\"$HOME/.nvm\"",
-              "source \"$NVM_DIR/nvm.sh\"",
               "cd /home/ec2-user/apps",
               "rm -rf api",
               "mkdir -p /home/ec2-user/apps/api",
-              "cd /home/ec2-user/apps",
               "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip .",
-              "rm -rf api/*",
               "unzip -o api-release.zip -d api",
               "cd api",
               "pnpm install --omit=dev",
