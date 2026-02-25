@@ -68,13 +68,12 @@ jobs:
 
               "rm -rf api/*",
 
-              "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip /home/ec2-user/apps/",
+              "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip /home/ec2-user/apps/api-release.zip",
+              "chown ec2-user:ec2-user /home/ec2-user/apps/api-release.zip",
 
               "unzip -o /home/ec2-user/apps/api-release.zip -d api",
 
               "cd /home/ec2-user/apps/api",
-
-              "nvm use 20",
 
               "pnpm install --prod",
 
