@@ -37,6 +37,10 @@ function writeJsonAtomic(file, data) {
   fs.renameSync(temp, file);
 }
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // =========================
 // 📦 PROJECT ROUTES
 // =========================
