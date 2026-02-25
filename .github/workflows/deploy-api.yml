@@ -58,16 +58,28 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --query "Command.CommandId" \
             --output text \
-            --execution-user ec2-user \
             --parameters 'commands=[
+              "export NVM_DIR=\"$HOME/.nvm\"",
+              "[ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"",
+              "source ~/.bashrc",
+
               "cd /home/ec2-user/apps",
-              "rm -rf api",
-              "mkdir -p /home/ec2-user/apps/api",
-              "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip .",
-              "unzip -o api-release.zip -d api",
-              "cd api",
-              "pnpm install --omit=dev",
-              "pm2 restart api || pm2 start dist/server.js --name api"
+              "chown -R ec2-user:ec2-user /home/ec2-user/apps",
+
+              "rm -rf api/*",
+
+              "aws s3 cp s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip /home/ec2-user/apps/",
+
+              "unzip -o /home/ec2-user/apps/api-release.zip -d api",
+
+              "cd /home/ec2-user/apps/api",
+
+              "nvm use 20",
+
+              "pnpm install --prod",
+
+              "pm2 stop api || true",
+              "pm2 start dist/server.js --name api"
             ]')
 
           echo "Command ID: $COMMAND_ID"
