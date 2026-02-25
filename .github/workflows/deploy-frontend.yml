@@ -38,7 +38,7 @@ jobs:
 
       - name: Set frontend API base URL
         working-directory: frontend
-        run: echo "VITE_API_BASE=http://api.prjmanager.com:3000" >> $GITHUB_ENV
+        run: echo "VITE_API_BASE=https://api.prjmanager.com:3000" >> $GITHUB_ENV
 
       - name: Build project
         working-directory: frontend
