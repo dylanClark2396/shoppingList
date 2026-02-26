@@ -244,7 +244,8 @@ async function handleSpacePhotoUpload(event: Event) {
   const { uploadUrl, publicUrl } = await getSpaceUploadUrl(
     Number(project.value.id),
     Number(currentSpace.value.id),
-    file.name
+    file.name,
+    file.type
   )
 
   await fetch(uploadUrl, {

@@ -91,9 +91,12 @@ export function useApi() {
   const getSpaceUploadUrl = async (
     projectId: number,
     spaceId: number,
-    filename: string
+    filename: string,
+    contentType: string
   ): Promise<{ uploadUrl: string; publicUrl: string }> => {
-    const res = await fetch(`${API_ROUTES.spaceUploadUrl(projectId, spaceId)}?filename=${encodeURIComponent(filename)}`)
+    const res = await fetch(
+      `${API_ROUTES.spaceUploadUrl(projectId, spaceId)}?filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(contentType)}`
+    )
     return safeJson(res)
   }
 
