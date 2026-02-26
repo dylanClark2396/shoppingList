@@ -141,7 +141,7 @@ async function handleAddProduct(payload: { measurementId: number; product: Produ
 
 async function handleRemoveProduct(payload: {
   measurementId: number,
-  sku: string
+  sku: number
 }) {
   await removeProductFromMeasurement(Number(project.value?.id), Number(currentSpace.value?.id), payload.measurementId, payload.sku)
 
@@ -177,7 +177,7 @@ async function handleAddSpace() {
 
 async function handleUpdateproductQuantity(payload: {
   measurementId: number,
-  sku: string
+  sku: number
   updates: Partial<Product>
 }) {
   if (!project.value || !currentSpace.value) return

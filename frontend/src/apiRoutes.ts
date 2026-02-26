@@ -42,7 +42,7 @@ export const API_ROUTES = {
     projectId: number,
     spaceId: number,
     measurementId: number,
-    sku: string
+    sku: number
   ) =>
     `${API_BASE_URL}/projects/${projectId}/spaces/${spaceId}/measurements/${measurementId}/products/${sku}`,
 
@@ -50,7 +50,7 @@ export const API_ROUTES = {
     projectId: number,
     spaceId: number,
     measurementId: number,
-    sku: string
+    sku: number
   ) =>
     `${API_BASE_URL}/projects/${projectId}/spaces/${spaceId}/measurements/${measurementId}/products/${sku}`,
 

@@ -28,7 +28,7 @@ export interface Project {
 }
 
 export interface Product {
-  sku: string;
+  sku: number;
   item: string;
   dimensions: string;
   images: string[];

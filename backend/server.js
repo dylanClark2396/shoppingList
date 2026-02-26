@@ -368,11 +368,6 @@ app.patch(
 // 🛍 PRODUCTS MASTER LIST
 // =========================
 
-app.get('/products', (req, res) => {
-  const data = readJson(PRODUCTS_FILE, []);
-  res.json(data);
-});
-
 app.get('/products/:id', (req, res) => {
   const data = readJson(PRODUCTS_FILE, []);
   const product = data.find(p => p.id === Number(req.params.id));

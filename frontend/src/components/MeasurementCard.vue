@@ -160,8 +160,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'add-product', payload: { measurementId: number; product: Product }): void
-    (e: 'remove-product', payload: { measurementId: number; sku: string }): void
-    (e: 'update-product-quantity', payload: { measurementId: number; sku: string, updates: Partial<Product> }): void
+    (e: 'remove-product', payload: { measurementId: number; sku: number }): void
+    (e: 'update-product-quantity', payload: { measurementId: number; sku: number, updates: Partial<Product> }): void
     (e: 'update-measurement', value: Measurement): void
 }>()
 
@@ -251,14 +251,14 @@ const handleAddTolist = () => {
     chosenProduct.value = undefined
 }
 
-const handleRemove = (sku: string) => {
+const handleRemove = (sku: number) => {
     if (!sku || !props.measurement) return
     emit('remove-product', {
         measurementId: props.measurement.id,
         sku
     })
 }
-const handleProductUpdate = (sku: string, productQuantity: number) => {
+const handleProductUpdate = (sku: number, productQuantity: number) => {
     if (!sku || !props.measurement) return
     emit('update-product-quantity', {
         measurementId: props.measurement.id,

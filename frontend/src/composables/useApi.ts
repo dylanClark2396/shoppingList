@@ -151,7 +151,7 @@ export function useApi() {
     projectId: number,
     spaceId: number,
     measurementId: number,
-    sku: string
+    sku: number
   ): Promise<void> => {
     const res = await fetch(
       API_ROUTES.removeProductFromMeasurement(
@@ -172,7 +172,7 @@ export function useApi() {
   projectId: number,
   spaceId: number,
   measurementId: number,
-  sku: string,
+  sku: number,
   updates: Partial<Product>
 ): Promise<Product> => {
   const res = await fetch(

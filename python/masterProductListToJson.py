@@ -47,11 +47,11 @@ def clean_value(val, key=None):
     # Special handling for SKU column
     if key == SKU_COLUMN:
         if isinstance(val, float) and val.is_integer():
-            return str(int(val))
-        return str(val).strip()
+            return int(val)
+        # return str(val).strip()
 
     if isinstance(val, float) and val.is_integer():
-        return str(int(val))
+        return int(val)
 
     return val
 
