@@ -59,7 +59,7 @@ The deployed backend is `server.js`, bundled via esbuild and uploaded to S3 on p
 - `src/models.ts` — TypeScript interfaces for the full data hierarchy
 - `src/router/index.ts` — two routes: `/` (Projects list) and `/project/:id` (Project detail)
 
-PrimeVue components are **auto-imported** via `unplugin-vue-components` + `PrimeVueResolver` — no manual imports needed in `.vue` files.
+PrimeVue components are **auto-imported** via `unplugin-vue-components` + `PrimeVueResolver` — no manual imports needed in `.vue` files. **Always prefer PrimeVue components over plain HTML elements** when a suitable component exists (e.g. `Button`, `InputText`, `Dialog`, `Tag`, `Image`, `Card`, `Select`, etc.).
 
 ### Python pipeline
 `masterProductListToJson.py` reads `MasterProductList.xlsx`, normalizes column names (maps `sku_number` → `sku`), extracts embedded images by parsing the xlsx zip internals, and writes `output/data.json` + `output/images/`. The backend's file-based server points to this output directory.

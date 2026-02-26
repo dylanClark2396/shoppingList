@@ -88,6 +88,15 @@ export function useApi() {
     if (!res.ok) throw new Error('Failed to delete space')
   }
 
+  const deleteSpaceImage = async (projectId: number, spaceId: number, url: string): Promise<void> => {
+    const res = await fetch(API_ROUTES.spaceImages(projectId, spaceId), {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+    if (!res.ok) throw new Error('Failed to delete image')
+  }
+
   const getSpaceUploadUrl = async (
     projectId: number,
     spaceId: number,
@@ -239,6 +248,7 @@ export function useApi() {
     createSpace,
     updateSpace,
     deleteSpace,
+    deleteSpaceImage,
     getSpaceUploadUrl,
     createMeasurement,
     updateMeasurement,

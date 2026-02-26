@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import fs from 'fs';
 import cors from 'cors';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const app = express();
@@ -13,7 +13,11 @@ const DATA_FILE = './data/projects.json';
 const PRODUCTS_FILE = '../python/output/data.json';
 const IMAGE_BUCKET = process.env.S3_IMAGES_BUCKET;
 
-const s3 = new S3Client({ region: 'us-east-2' });
+const s3 = new S3Client({
+  region: 'us-east-2',
+  requestChecksumCalculation: 'WHEN_REQUIRED',
+  responseChecksumValidation: 'WHEN_REQUIRED',
+});
 
 // =========================
 // 🔧 ID GENERATOR
@@ -178,9 +182,32 @@ app.get('/projects/:projectId/spaces/:spaceId/upload-url', async (req, res) => {
     ContentType: contentType || 'application/octet-stream'
   });
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
-  const publicUrl = `https://${IMAGE_BUCKET}.s3.amazonaws.com/${key}`;
+  const publicUrl = `https://${IMAGE_BUCKET}.s3.us-east-2.amazonaws.com/${key}`;
 
   res.json({ uploadUrl, publicUrl });
+});
+
+// 🗑 Delete space photo
+app.delete('/projects/:projectId/spaces/:spaceId/images', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'url required' });
+
+  // Extract the S3 key from the public URL
+  const key = new URL(url).pathname.slice(1);
+
+  await s3.send(new DeleteObjectCommand({ Bucket: IMAGE_BUCKET, Key: key }));
+
+  const projects = readJson(DATA_FILE, []);
+  const project = projects.find(p => p.id === Number(req.params.projectId));
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const space = project.spaces?.find(s => s.id === Number(req.params.spaceId));
+  if (!space) return res.status(404).json({ error: 'Space not found' });
+
+  space.images = (space.images || []).filter(i => i !== url);
+
+  writeJsonAtomic(DATA_FILE, projects);
+  res.json({ status: 'ok' });
 });
 
 // ❌ Delete space

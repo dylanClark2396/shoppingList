@@ -29,22 +29,11 @@
       </Popover>
 
       <div class="space-list">
-        <div
-          v-for="space in project?.spaces"
-          :key="space.id"
-          class="space-list-item"
-          :class="{ active: currentSpace?.id === space.id }"
-          @click="currentSpace = space"
-        >
+        <div v-for="space in project?.spaces" :key="space.id" class="space-list-item"
+          :class="{ active: currentSpace?.id === space.id }" @click="currentSpace = space">
           <span class="space-list-label">{{ space.name }}</span>
-          <Button
-            icon="pi pi-times"
-            size="small"
-            text
-            severity="danger"
-            aria-label="Delete space"
-            @click.stop="handleDeleteSpace(space.id)"
-          />
+          <Button icon="pi pi-times" size="small" text severity="danger" aria-label="Delete space"
+            @click.stop="handleDeleteSpace(space.id)" />
         </div>
       </div>
     </div>
@@ -55,25 +44,24 @@
     <div class="right">
       <!-- space photos -->
       <div v-if="currentSpace" class="space-photos-bar">
-        <Image
-          v-for="url in currentSpace.images"
-          :key="url"
-          :src="url"
-          alt="Space photo"
-          width="80"
-          preview
-          style="margin-right: 0.5rem;"
-        />
         <label class="upload-btn">
           <i class="pi pi-image" style="margin-right: 0.25rem;" />
           Add Photo
-          <input
-            type="file"
-            accept="image/*"
-            style="display: none;"
-            @change="handleSpacePhotoUpload"
-          />
+          <input type="file" multiple accept="image/*" style="display: none;" @change="handleSpacePhotoUpload" />
         </label>
+        <div class="photo-thumbs-row">
+          <div v-for="url in currentSpace.images" :key="url" class="photo-thumb-wrapper">
+            <Image :src="url" alt="Space photo" width="80" preview />
+            <Button
+              icon="pi pi-times"
+              size="small"
+              severity="danger"
+              rounded
+              class="photo-delete-btn"
+              @click="handleDeleteSpaceImage(url)"
+            />
+          </div>
+        </div>
       </div>
 
       <div class="cards-container">
@@ -82,8 +70,7 @@
         <div v-for="value in getcurrentSpace()?.measurements" :key="value.id">
           <MeasurementCard :measurement="value" :all-products="allProducts" @add-product="handleAddProduct"
             @remove-product="handleRemoveProduct" @update-measurement="handleUpdateMeasurement"
-            @update-product-quantity="handleUpdateproductQuantity"
-            @remove-measurement="handleDeleteMeasurement" />
+            @update-product-quantity="handleUpdateproductQuantity" @remove-measurement="handleDeleteMeasurement" />
         </div>
       </div>
     </div>
@@ -111,6 +98,7 @@ const {
   deleteSpace,
   updateSpace,
   getSpaceUploadUrl,
+  deleteSpaceImage,
   removeProductFromMeasurement,
   updateProduct
 } = useApi();
@@ -237,29 +225,40 @@ async function handleDeleteSpace(spaceId: number) {
   }
 }
 
+async function handleDeleteSpaceImage(url: string) {
+  if (!currentSpace.value || !project.value) return
+  await deleteSpaceImage(Number(project.value.id), Number(currentSpace.value.id), url)
+  currentSpace.value.images = (currentSpace.value.images ?? []).filter(i => i !== url)
+}
+
 async function handleSpacePhotoUpload(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file || !currentSpace.value || !project.value) return
+  const files = Array.from((event.target as HTMLInputElement).files ?? [])
+  if (!files.length || !currentSpace.value || !project.value) return
 
-  const { uploadUrl, publicUrl } = await getSpaceUploadUrl(
-    Number(project.value.id),
-    Number(currentSpace.value.id),
-    file.name,
-    file.type
-  )
+  const newUrls: string[] = []
 
-  await fetch(uploadUrl, {
-    method: 'PUT',
-    body: file,
-    headers: { 'Content-Type': file.type }
-  })
+  for (const file of files) {
+    const { uploadUrl, publicUrl } = await getSpaceUploadUrl(
+      Number(project.value.id),
+      Number(currentSpace.value.id),
+      file.name,
+      file.type
+    )
 
-  const updatedImages = [...(currentSpace.value.images ?? []), publicUrl]
+    await fetch(uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type }
+    })
+
+    newUrls.push(publicUrl)
+  }
+
+  const updatedImages = [...(currentSpace.value.images ?? []), ...newUrls]
   await updateSpace(Number(project.value.id), Number(currentSpace.value.id), { images: updatedImages })
 
   currentSpace.value.images = updatedImages
 
-  // reset the file input
   ;(event.target as HTMLInputElement).value = ''
 }
 
@@ -306,7 +305,7 @@ async function handleUpdateproductQuantity(payload: {
 }
 
 .left {
-  flex: 0 0 200px;
+  flex: 0 0 230px;
 }
 
 .right {
@@ -371,11 +370,17 @@ async function handleUpdateproductQuantity(payload: {
 
 .space-photos-bar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0 0 0.75rem 1rem;
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.photo-thumbs-row {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--p-surface-200);
 }
 
 .upload-btn {
@@ -393,5 +398,19 @@ async function handleUpdateproductQuantity(payload: {
 .upload-btn:hover {
   border-color: var(--p-primary-500);
   color: var(--p-primary-500);
+}
+
+.photo-thumb-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.photo-delete-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  padding: 0 !important;
 }
 </style>
