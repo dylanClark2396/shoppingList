@@ -10,7 +10,7 @@
                     </span>
                     <div>
                         <Button icon="pi pi-times" size="small" outlined severity="danger" aria-label="Remove"
-                            @click="console.log('removed')" style="margin-right: 1rem;" />
+                            @click="emit('remove-measurement', props.measurement!.id)" style="margin-right: 1rem;" />
                         <Button icon="pi pi-pencil" size="small" outlined severity="warning" aria-label="Edit"
                             @click="toggleEdit" />
                     </div>
@@ -163,6 +163,7 @@ const emit = defineEmits<{
     (e: 'remove-product', payload: { measurementId: number; sku: number }): void
     (e: 'update-product-quantity', payload: { measurementId: number; sku: number, updates: Partial<Product> }): void
     (e: 'update-measurement', value: Measurement): void
+    (e: 'remove-measurement', measurementId: number): void
 }>()
 
 const isEditing = ref(false)

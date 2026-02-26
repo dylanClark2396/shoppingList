@@ -27,20 +27,63 @@
           <Button label="Add" outlined severity="success" @click="handleAddSpace" />
         </div>
       </Popover>
-      <Menu :model="spaceItems"/>
+
+      <div class="space-list">
+        <div
+          v-for="space in project?.spaces"
+          :key="space.id"
+          class="space-list-item"
+          :class="{ active: currentSpace?.id === space.id }"
+          @click="currentSpace = space"
+        >
+          <span class="space-list-label">{{ space.name }}</span>
+          <Button
+            icon="pi pi-times"
+            size="small"
+            text
+            severity="danger"
+            aria-label="Delete space"
+            @click.stop="handleDeleteSpace(space.id)"
+          />
+        </div>
+      </div>
     </div>
 
 
 
     <!-- measurement module section -->
     <div class="right">
+      <!-- space photos -->
+      <div v-if="currentSpace" class="space-photos-bar">
+        <Image
+          v-for="url in currentSpace.images"
+          :key="url"
+          :src="url"
+          alt="Space photo"
+          width="80"
+          preview
+          style="margin-right: 0.5rem;"
+        />
+        <label class="upload-btn">
+          <i class="pi pi-image" style="margin-right: 0.25rem;" />
+          Add Photo
+          <input
+            type="file"
+            accept="image/*"
+            style="display: none;"
+            @change="handleSpacePhotoUpload"
+          />
+        </label>
+      </div>
+
       <div class="cards-container">
         <MeasurementCardNew @create-measurement="handleCreateMeasurement"
           @update-measurement="handleUpdateMeasurement" />
-        <div v-for="value in getcurrentSpace()?.measurements">
+        <div v-for="value in getcurrentSpace()?.measurements" :key="value.id">
           <MeasurementCard :measurement="value" :all-products="allProducts" @add-product="handleAddProduct"
             @remove-product="handleRemoveProduct" @update-measurement="handleUpdateMeasurement"
-            @update-product-quantity="handleUpdateproductQuantity" />
+            @update-product-quantity="handleUpdateproductQuantity"
+            @remove-measurement="handleDeleteMeasurement" />
         </div>
       </div>
     </div>
@@ -49,7 +92,7 @@
 
 <script setup lang="ts">
 
-import { computed, onMounted, ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import MeasurementCard from "@/components/MeasurementCard.vue";
 import router from "@/router";
 import { useRoute } from "vue-router";
@@ -57,7 +100,20 @@ import type { Measurement, Product, Project, Space } from "@/models";
 import { useApi } from '@/composables/useApi';
 import MeasurementCardNew from "@/components/MeasurementCardNew.vue";
 
-const { getProject, getProducts, createMeasurement, updateMeasurement, addProductToMeasurement, createSpace, removeProductFromMeasurement, updateProduct } = useApi();
+const {
+  getProject,
+  getProducts,
+  createMeasurement,
+  updateMeasurement,
+  deleteMeasurement,
+  addProductToMeasurement,
+  createSpace,
+  deleteSpace,
+  updateSpace,
+  getSpaceUploadUrl,
+  removeProductFromMeasurement,
+  updateProduct
+} = useApi();
 
 const route = useRoute();
 const project = ref<Project | null>(null);
@@ -70,16 +126,6 @@ onMounted(async () => {
   loadProject();
   loadProducts();
 });
-
-const spaceItems = computed(() =>
-  project.value?.spaces.map((space) => ({
-    label: space.name,
-    command: () => {
-      currentSpace.value = space;
-    }
-  }))
-)
-
 
 const toggleSpaceEditPopover = (event: any) => {
   popover.value?.toggle(event);
@@ -123,6 +169,12 @@ function handleUpdateMeasurement(updated: Measurement) {
   } else {
     console.error('Measurement not found for update');
   }
+}
+
+async function handleDeleteMeasurement(measurementId: number) {
+  await deleteMeasurement(Number(project.value?.id), Number(currentSpace.value?.id), measurementId)
+  const space = project.value?.spaces.find(s => s.id === currentSpace.value?.id)
+  if (space) space.measurements = space.measurements.filter(m => m.id !== measurementId)
 }
 
 async function handleAddProduct(payload: { measurementId: number; product: Product }) {
@@ -173,6 +225,41 @@ async function handleAddSpace() {
 
   newSpaceName.value = ''
   popover.value?.hide()
+}
+
+async function handleDeleteSpace(spaceId: number) {
+  await deleteSpace(Number(project.value?.id), spaceId)
+  if (project.value) {
+    project.value.spaces = project.value.spaces.filter(s => s.id !== spaceId)
+    if (currentSpace.value?.id === spaceId) {
+      currentSpace.value = project.value.spaces[0]
+    }
+  }
+}
+
+async function handleSpacePhotoUpload(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file || !currentSpace.value || !project.value) return
+
+  const { uploadUrl, publicUrl } = await getSpaceUploadUrl(
+    Number(project.value.id),
+    Number(currentSpace.value.id),
+    file.name
+  )
+
+  await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': file.type }
+  })
+
+  const updatedImages = [...(currentSpace.value.images ?? []), publicUrl]
+  await updateSpace(Number(project.value.id), Number(currentSpace.value.id), { images: updatedImages })
+
+  currentSpace.value.images = updatedImages
+
+  // reset the file input
+  ;(event.target as HTMLInputElement).value = ''
 }
 
 async function handleUpdateproductQuantity(payload: {
@@ -246,5 +333,64 @@ async function handleUpdateproductQuantity(payload: {
   justify-content: space-between;
   width: 100%;
   margin-bottom: .5rem;
+}
+
+.space-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.space-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.space-list-item:hover {
+  background: var(--p-surface-100);
+}
+
+.space-list-item.active {
+  background: var(--p-primary-50);
+  font-weight: 600;
+}
+
+.space-list-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.95rem;
+}
+
+.space-photos-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  border: 1px dashed var(--p-surface-400);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--p-surface-600);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.upload-btn:hover {
+  border-color: var(--p-primary-500);
+  color: var(--p-primary-500);
 }
 </style>

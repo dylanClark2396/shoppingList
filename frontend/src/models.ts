@@ -19,6 +19,7 @@ export interface Space {
   id: number;
   name: string;
   measurements: Measurement[];
+  images?: string[];
 }
 
 export interface Project {

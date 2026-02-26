@@ -1,6 +1,8 @@
 import express from 'express';
 import fs from 'fs';
 import cors from 'cors';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const app = express();
 app.use(cors());
@@ -8,6 +10,9 @@ app.use(express.json());
 
 const DATA_FILE = './data/projects.json';
 const PRODUCTS_FILE = '../python/output/data.json';
+const IMAGE_BUCKET = process.env.S3_IMAGES_BUCKET;
+
+const s3 = new S3Client({ region: process.env.AWS_REGION ?? 'us-east-2' });
 
 // =========================
 // 🔧 ID GENERATOR
@@ -158,6 +163,19 @@ app.patch('/projects/:projectId/spaces/:spaceId', (req, res) => {
 
   writeJsonAtomic(DATA_FILE, projects);
   res.json({ status: 'ok', space });
+});
+
+// 📸 Presigned upload URL for space photo
+app.get('/projects/:projectId/spaces/:spaceId/upload-url', async (req, res) => {
+  const { filename } = req.query;
+  if (!filename) return res.status(400).json({ error: 'filename required' });
+
+  const key = `spaces/${req.params.spaceId}/${Date.now()}-${filename}`;
+  const command = new PutObjectCommand({ Bucket: IMAGE_BUCKET, Key: key });
+  const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
+  const publicUrl = `https://${IMAGE_BUCKET}.s3.amazonaws.com/${key}`;
+
+  res.json({ uploadUrl, publicUrl });
 });
 
 // ❌ Delete space
@@ -367,6 +385,11 @@ app.patch(
 // =========================
 // 🛍 PRODUCTS MASTER LIST
 // =========================
+
+app.get('/products', (req, res) => {
+  const data = readJson(PRODUCTS_FILE, []);
+  res.json(data);
+});
 
 app.get('/products/:id', (req, res) => {
   const data = readJson(PRODUCTS_FILE, []);

@@ -40,7 +40,7 @@ function generateId() {
 async function getProject(projectId) {
   const result = await db.send(new GetCommand({
     TableName: PROJECT_TABLE,
-    Key: { id: Number(req.params.id) }
+    Key: { id: Number(projectId) }
   }))
   return result.Item
 }

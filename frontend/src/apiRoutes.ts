@@ -19,6 +19,9 @@ export const API_ROUTES = {
   space: (projectId: number, spaceId: number) =>
     `${API_BASE_URL}/projects/${projectId}/spaces/${spaceId}`,
 
+  spaceUploadUrl: (projectId: number, spaceId: number) =>
+    `${API_BASE_URL}/projects/${projectId}/spaces/${spaceId}/upload-url`,
+
   // ========================
   // 📐 Measurements (under space)
   // ========================

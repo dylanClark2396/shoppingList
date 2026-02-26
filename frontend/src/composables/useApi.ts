@@ -83,6 +83,20 @@ export function useApi() {
     return data.space
   }
 
+  const deleteSpace = async (projectId: number, spaceId: number): Promise<void> => {
+    const res = await fetch(API_ROUTES.space(projectId, spaceId), { method: 'DELETE' })
+    if (!res.ok) throw new Error('Failed to delete space')
+  }
+
+  const getSpaceUploadUrl = async (
+    projectId: number,
+    spaceId: number,
+    filename: string
+  ): Promise<{ uploadUrl: string; publicUrl: string }> => {
+    const res = await fetch(`${API_ROUTES.spaceUploadUrl(projectId, spaceId)}?filename=${encodeURIComponent(filename)}`)
+    return safeJson(res)
+  }
+
   // ========================
   // 📐 Measurements (NOW UNDER SPACE)
   // ========================
@@ -122,6 +136,18 @@ export function useApi() {
 
     const data = await safeJson<{ measurement: Measurement }>(res)
     return data.measurement
+  }
+
+  const deleteMeasurement = async (
+    projectId: number,
+    spaceId: number,
+    measurementId: number
+  ): Promise<void> => {
+    const res = await fetch(
+      API_ROUTES.measurement(projectId, spaceId, measurementId),
+      { method: 'DELETE' }
+    )
+    if (!res.ok) throw new Error('Failed to delete measurement')
   }
 
   // ========================
@@ -209,8 +235,11 @@ export function useApi() {
     updateProject,
     createSpace,
     updateSpace,
+    deleteSpace,
+    getSpaceUploadUrl,
     createMeasurement,
     updateMeasurement,
+    deleteMeasurement,
     addProductToMeasurement,
     removeProductFromMeasurement,
     updateProduct,
