@@ -49,7 +49,7 @@ jobs:
         env:
           LAMBDA_EXEC_ROLE: ${{ secrets.LAMBDA_EXEC_ROLE_ARN }}
           DEPLOY_BUCKET: ${{ secrets.DEPLOY_BUCKET }}
-          S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET }}
+          PRODUCT_IMAGE_BUCKET: ${{ secrets.PRODUCT_IMAGE_BUCKET }}
         run: |
           if aws lambda get-function --function-name product-ingestion 2>/dev/null; then
             echo "Function exists — updating code..."
@@ -67,7 +67,7 @@ jobs:
               --code "S3Bucket=$DEPLOY_BUCKET,S3Key=product-ingestion.zip" \
               --timeout 300 \
               --memory-size 512 \
-              --environment "Variables={PRODUCTS_TABLE=Products,S3_IMAGES_BUCKET=$S3_IMAGES_BUCKET}"
+              --environment "Variables={PRODUCTS_TABLE=Products,PRODUCT_IMAGE_BUCKET=$PRODUCT_IMAGE_BUCKET}"
           fi
 
       - name: Wait for function update to finish
@@ -75,11 +75,11 @@ jobs:
 
       - name: Sync environment variables
         env:
-          S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET }}
+          PRODUCT_IMAGE_BUCKET: ${{ secrets.PRODUCT_IMAGE_BUCKET }}
         run: |
           ENV_JSON=$(jq -n \
-            --arg ib "$S3_IMAGES_BUCKET" \
-            '{Variables: {PRODUCTS_TABLE: "Products", S3_IMAGES_BUCKET: $ib}}')
+            --arg ib "$PRODUCT_IMAGE_BUCKET" \
+            '{Variables: {PRODUCTS_TABLE: "Products", PRODUCT_IMAGE_BUCKET: $ib}}')
 
           aws lambda update-function-configuration \
             --function-name product-ingestion \

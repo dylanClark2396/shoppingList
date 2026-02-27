@@ -10,7 +10,7 @@ from decimal import Decimal
 # ========= CONFIG =========
 SKU_COLUMN = "sku"
 PRODUCTS_TABLE = os.environ.get("PRODUCTS_TABLE", "Products")
-S3_IMAGES_BUCKET = os.environ.get("S3_IMAGES_BUCKET")
+PRODUCT_IMAGE_BUCKET = os.environ.get("PRODUCT_IMAGE_BUCKET")
 IMAGES_PREFIX = "product-images"
 # ==========================
 
@@ -243,7 +243,7 @@ def process(excel_path, temp_dir):
                     record["sheet_names"].append(sheet_name)
 
             # Upload image to S3 if present
-            if excel_row in row_image_map and S3_IMAGES_BUCKET:
+            if excel_row in row_image_map and PRODUCT_IMAGE_BUCKET:
                 source_image = row_image_map[excel_row]
                 ext = os.path.splitext(source_image)[1].lower()
                 image_count = len(record["images"]) + 1
@@ -257,13 +257,13 @@ def process(excel_path, temp_dir):
                 print(f"  Uploading image: {s3_key}")
                 s3.upload_file(
                     source_image,
-                    S3_IMAGES_BUCKET,
+                    PRODUCT_IMAGE_BUCKET,
                     s3_key,
                     ExtraArgs={"ContentType": CONTENT_TYPES.get(ext, "application/octet-stream")},
                 )
 
                 record["images"].append(
-                    f"https://{S3_IMAGES_BUCKET}.s3.amazonaws.com/{s3_key}"
+                    f"https://{PRODUCT_IMAGE_BUCKET}.s3.amazonaws.com/{s3_key}"
                 )
 
         print(f"  {len(df)} rows processed")
