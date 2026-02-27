@@ -34,7 +34,7 @@ jobs:
         working-directory: backend/product-ingestion
         run: |
           cp lambda_function.py ./package/
-          cd package && zip -r ../../product-ingestion.zip .
+          cd package && zip -r $GITHUB_WORKSPACE/product-ingestion.zip .
 
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
