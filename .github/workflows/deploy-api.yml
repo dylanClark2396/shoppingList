@@ -48,5 +48,53 @@ jobs:
           aws-region: us-east-2
 
       - name: Upload artifact to S3
+        run: aws s3 cp api-release.zip s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip
+
+      - name: Deploy to EC2 via SSM
+        env:
+          DEPLOY_BUCKET: ${{ secrets.DEPLOY_BUCKET }}
+          EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET }}
         run: |
-          aws s3 cp api-release.zip s3://${{ secrets.DEPLOY_BUCKET }}/api-release.zip
+          # Build the SSM parameters JSON safely using jq so secrets
+          # with special characters don't break shell quoting.
+          PARAMS=$(jq -n \
+            --arg b  "$DEPLOY_BUCKET" \
+            --arg ib "$S3_IMAGES_BUCKET" \
+            '{commands: [
+              "set -euo pipefail",
+
+              "# ── Pull latest build from S3 ──────────────────────────────",
+              ("aws s3 cp s3://" + $b + "/api-release.zip /tmp/api-release.zip"),
+
+              "# ── Extract to app dir ─────────────────────────────────────",
+              "mkdir -p /home/ec2-user/app",
+              "unzip -o /tmp/api-release.zip -d /home/ec2-user/app",
+
+              "# ── Fix ownership (SSM runs as root) ───────────────────────",
+              "chown -R ec2-user:ec2-user /home/ec2-user/app",
+
+              "# ── Write / update S3_IMAGES_BUCKET in .env ─────────────────",
+              "touch /home/ec2-user/app/.env",
+              ("sed -i \"/^S3_IMAGES_BUCKET=/d\" /home/ec2-user/app/.env && printf \"S3_IMAGES_BUCKET=" + $ib + "\\n\" >> /home/ec2-user/app/.env"),
+              "chown ec2-user:ec2-user /home/ec2-user/app/.env",
+
+              "# ── Restart server via pm2 as ec2-user ─────────────────────",
+              "runuser -l ec2-user -c \"pm2 restart server 2>/dev/null || pm2 start /home/ec2-user/app/dist/server.js --name server\""
+            ]}')
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "$PARAMS" \
+            --comment "Deploy ${{ github.sha }}" \
+            --timeout-seconds 120 \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # Block until the command finishes; exits non-zero if it fails.
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID"
