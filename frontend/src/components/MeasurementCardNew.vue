@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Measurement } from '@/models';
+import { categoryOptions } from '@/constants';
 
 const props = defineProps<{
   measurement?: Measurement
@@ -61,11 +62,6 @@ const measurementCategory = ref(props.measurement?.category ?? '')
 const measurementNote = ref(props.measurement?.note ?? '')
 
 
-const categoryOptions = [
-  { label: 'Drawer', value: 'Drawer' },
-  { label: 'Cabinet', value: 'Cabinet' },
-  { label: 'Shelf', value: 'Shelf' }
-]
 
 function buildMeasurement(): Partial<Measurement> {
   const measurement: Partial<Measurement> = {

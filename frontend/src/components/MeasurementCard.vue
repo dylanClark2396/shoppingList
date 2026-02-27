@@ -154,6 +154,7 @@
 import type { Measurement, Product } from '@/models';
 import type { AutoCompleteCompleteEvent } from 'primevue/autocomplete';
 import { computed, reactive, ref, watch } from 'vue';
+import { categoryOptions } from '@/constants';
 
 const props = defineProps<{
     allProducts?: Product[];
@@ -181,11 +182,6 @@ const editable = reactive({
     note: ''
 })
 
-const categoryOptions = [
-    { label: 'Drawer', value: 'Drawer' },
-    { label: 'Cabinet', value: 'Cabinet' },
-    { label: 'Shelf', value: 'Shelf' }
-]
 
 const activePanels = ref<string[]>([])
 

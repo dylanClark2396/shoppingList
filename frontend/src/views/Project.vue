@@ -395,6 +395,7 @@ async function handleUpdateproductQuantity(payload: {
   flex-wrap: wrap;
   gap: 1rem;
   align-content: flex-start;
+  align-items: flex-start;
   overflow-y: auto;
   flex: 1;
 }
