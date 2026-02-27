@@ -1,0 +1,113 @@
+name: Deploy Product Ingestion Lambda
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/product-ingestion/**'
+      - '.github/workflows/deploy-product-ingestion.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies into package dir
+        working-directory: backend/product-ingestion
+        run: pip install -r requirements.txt -t ./package/
+
+      - name: Bundle Lambda zip
+        working-directory: backend/product-ingestion
+        run: |
+          cp lambda_function.py ./package/
+          cd package && zip -r ../../product-ingestion.zip .
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE }}
+          aws-region: us-east-2
+
+      - name: Upload zip to S3
+        run: aws s3 cp product-ingestion.zip s3://${{ secrets.DEPLOY_BUCKET }}/product-ingestion.zip
+
+      - name: Create or update Lambda function code
+        env:
+          LAMBDA_EXEC_ROLE: ${{ secrets.LAMBDA_EXEC_ROLE_ARN }}
+          DEPLOY_BUCKET: ${{ secrets.DEPLOY_BUCKET }}
+          S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET }}
+        run: |
+          if aws lambda get-function --function-name product-ingestion 2>/dev/null; then
+            echo "Function exists — updating code..."
+            aws lambda update-function-code \
+              --function-name product-ingestion \
+              --s3-bucket "$DEPLOY_BUCKET" \
+              --s3-key product-ingestion.zip
+          else
+            echo "Function does not exist — creating..."
+            aws lambda create-function \
+              --function-name product-ingestion \
+              --runtime python3.12 \
+              --handler lambda_function.handler \
+              --role "$LAMBDA_EXEC_ROLE" \
+              --code "S3Bucket=$DEPLOY_BUCKET,S3Key=product-ingestion.zip" \
+              --timeout 300 \
+              --memory-size 512 \
+              --environment "Variables={PRODUCTS_TABLE=Products,S3_IMAGES_BUCKET=$S3_IMAGES_BUCKET}"
+          fi
+
+      - name: Wait for function update to finish
+        run: aws lambda wait function-updated --function-name product-ingestion
+
+      - name: Sync environment variables
+        env:
+          S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET }}
+        run: |
+          ENV_JSON=$(jq -n \
+            --arg ib "$S3_IMAGES_BUCKET" \
+            '{Variables: {PRODUCTS_TABLE: "Products", S3_IMAGES_BUCKET: $ib}}')
+
+          aws lambda update-function-configuration \
+            --function-name product-ingestion \
+            --environment "$ENV_JSON"
+
+      - name: Add S3 trigger (idempotent)
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          LAMBDA_ARN="arn:aws:lambda:us-east-2:${ACCOUNT_ID}:function:product-ingestion"
+
+          # Grant S3 permission to invoke the Lambda (no-op if already exists)
+          aws lambda add-permission \
+            --function-name product-ingestion \
+            --statement-id allow-s3-convert-product-excel \
+            --action lambda:InvokeFunction \
+            --principal s3.amazonaws.com \
+            --source-arn "arn:aws:s3:::convert-product-excel" \
+            2>/dev/null || true
+
+          # Apply the bucket notification (overwrites existing config)
+          NOTIFICATION=$(jq -n \
+            --arg arn "$LAMBDA_ARN" \
+            '{LambdaFunctionConfigurations: [{
+              Id: "ProductIngestionTrigger",
+              LambdaFunctionArn: $arn,
+              Events: ["s3:ObjectCreated:*"]
+            }]}')
+
+          aws s3api put-bucket-notification-configuration \
+            --bucket convert-product-excel \
+            --notification-configuration "$NOTIFICATION"
