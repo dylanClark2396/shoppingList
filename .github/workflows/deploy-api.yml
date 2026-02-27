@@ -67,20 +67,20 @@ jobs:
               "# ── Pull latest build from S3 ──────────────────────────────",
               ("aws s3 cp s3://" + $b + "/api-release.zip /tmp/api-release.zip"),
 
-              "# ── Extract to app dir ─────────────────────────────────────",
-              "mkdir -p /home/ec2-user/app",
-              "unzip -o /tmp/api-release.zip -d /home/ec2-user/app",
+              "# ── Extract to apps dir ────────────────────────────────────",
+              "mkdir -p /home/ec2-user/apps",
+              "unzip -o /tmp/api-release.zip -d /home/ec2-user/apps",
 
               "# ── Fix ownership (SSM runs as root) ───────────────────────",
-              "chown -R ec2-user:ec2-user /home/ec2-user/app",
+              "chown -R ec2-user:ec2-user /home/ec2-user/apps",
 
               "# ── Write / update S3_IMAGES_BUCKET in .env ─────────────────",
-              "touch /home/ec2-user/app/.env",
-              ("sed -i \"/^S3_IMAGES_BUCKET=/d\" /home/ec2-user/app/.env && printf \"S3_IMAGES_BUCKET=" + $ib + "\\n\" >> /home/ec2-user/app/.env"),
-              "chown ec2-user:ec2-user /home/ec2-user/app/.env",
+              "touch /home/ec2-user/apps/.env",
+              ("sed -i \"/^S3_IMAGES_BUCKET=/d\" /home/ec2-user/apps/.env && printf \"S3_IMAGES_BUCKET=" + $ib + "\\n\" >> /home/ec2-user/apps/.env"),
+              "chown ec2-user:ec2-user /home/ec2-user/apps/.env",
 
               "# ── Restart server via pm2 as ec2-user ─────────────────────",
-              "runuser -l ec2-user -c \"pm2 restart server 2>/dev/null || pm2 start /home/ec2-user/app/dist/server.js --name server\""
+              "runuser -l ec2-user -c \"pm2 restart server 2>/dev/null || pm2 start /home/ec2-user/apps/dist/server.js --name server\""
             ]}')
 
           COMMAND_ID=$(aws ssm send-command \
