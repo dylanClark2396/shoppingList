@@ -107,14 +107,22 @@ function submit() {
 
 <style scoped>
 .card {
-  max-width: 25rem;
-  height: 25rem;
+  width: 25rem;
   --p-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-  flex: 1 1 250px;
+  flex: 0 0 25rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 1rem;
+}
+
+@media (max-width: 768px) {
+  .card {
+    max-width: 100%;
+    width: 100%;
+    flex: 1 1 100%;
+    height: auto;
+  }
 }
 
 .measurement-grid {

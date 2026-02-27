@@ -87,7 +87,7 @@
             <!-- dynamic list of addable product -->
             <div style="margin-bottom: 0.5rem;">
                 <AutoComplete v-model="chosenProduct" @complete="search" :suggestions="filteredProducts"
-                    optionLabel="item" dataKey="sku" placeholder="Add Product" @option-select="handleAddTolist">
+                    optionLabel="item" dataKey="sku" placeholder="Add Product" @option-select="handleAddTolist" class="w-full">
                     <template #option="slotProps">
                         <div class="flex items-center">
                             <div>{{ slotProps.option.item }}</div>
@@ -96,54 +96,56 @@
                     </template>
                 </AutoComplete>
             </div>
-            <Accordion :value="activePanels" multiple>
-                <AccordionPanel v-for="product in props.measurement?.products" :key="product.sku" :value="product.sku"
-                    style="display: flex; justify-content:left;">
-                    <AccordionHeader>
-                        <Button style="margin-right: .5rem; max-width: 1.5rem;" outlined icon="pi pi-times"
-                            severity="danger" @click.stop="handleRemove(product.sku)" />
+            <div class="product-scroll">
+                <Accordion :value="activePanels" multiple>
+                    <AccordionPanel v-for="product in props.measurement?.products" :key="product.sku" :value="product.sku"
+                        style="display: flex; justify-content:left;">
+                        <AccordionHeader>
+                            <Button style="margin-right: .5rem; max-width: 1.5rem;" outlined icon="pi pi-times"
+                                severity="danger" @click.stop="handleRemove(product.sku)" />
 
-                        <span class="font-bold whitespace-nowrap">
-                            {{ product.item }}
-                        </span>
+                            <span class="font-bold whitespace-nowrap">
+                                {{ product.item }}
+                            </span>
 
-                    </AccordionHeader>
-                    <AccordionContent>
-                        <div class="accordion-row">
-                            <div class="accordion-left">
-                                <div class="flex items-start">
-                                    <InputNumber v-model="product.quantity" showButtons buttonLayout="vertical"
-                                        style="width: 3rem" size="small" :min="0" :max="99"
-                                        @update:model-value="val => handleProductUpdate(product.sku, val ?? 0)">
-                                        <template #incrementicon>
-                                            <span class="pi pi-plus" />
-                                        </template>
-                                        <template #decrementicon>
-                                            <span class="pi pi-minus" />
-                                        </template>
-                                    </InputNumber>
+                        </AccordionHeader>
+                        <AccordionContent>
+                            <div class="accordion-row">
+                                <div class="accordion-left">
+                                    <div class="flex items-start">
+                                        <InputNumber v-model="product.quantity" showButtons buttonLayout="vertical"
+                                            style="width: 3rem" size="small" :min="0" :max="99"
+                                            @update:model-value="val => handleProductUpdate(product.sku, val ?? 0)">
+                                            <template #incrementicon>
+                                                <span class="pi pi-plus" />
+                                            </template>
+                                            <template #decrementicon>
+                                                <span class="pi pi-minus" />
+                                            </template>
+                                        </InputNumber>
+                                    </div>
+                                </div>
+                                <div class="accordion-right">
+                                    <div class="flex justify-center" v-if="product.images?.length">
+                                        <Image v-for="value in product.images" :key="value" :src="'/' + value" alt="Image"
+                                            width="50" preview />
+                                    </div>
+
+                                    <div class="flex flex-wrap tag-spacing">
+                                        <Tag class="mr-2 mb-2" :value="`${product.sku}`" severity="info" />
+                                        <Tag class="mr-2 mb-2" :value="`$${product.price}`" severity="info" />
+                                        <Tag v-if="product.vendor" class="mr-2 mb-2" :value="product.vendor"
+                                            severity="info" />
+                                        <Tag v-if="product.sheetName" class="mr-2 mb-2" :value="product.sheetName"
+                                            severity="secondary" />
+                                        <Tag v-if="product.dimensions" class="mr-2 mb-2" :value="product.dimensions" />
+                                    </div>
                                 </div>
                             </div>
-                            <div class="accordion-right">
-                                <div class="flex justify-center" v-if="product.images?.length">
-                                    <Image v-for="value in product.images" :key="value" :src="'/' + value" alt="Image"
-                                        width="50" preview />
-                                </div>
-
-                                <div class="flex flex-wrap tag-spacing">
-                                    <Tag class="mr-2 mb-2" :value="`${product.sku}`" severity="info" />
-                                    <Tag class="mr-2 mb-2" :value="`$${product.price}`" severity="info" />
-                                    <Tag v-if="product.vendor" class="mr-2 mb-2" :value="product.vendor"
-                                        severity="info" />
-                                    <Tag v-if="product.sheetName" class="mr-2 mb-2" :value="product.sheetName"
-                                        severity="secondary" />
-                                    <Tag v-if="product.dimensions" class="mr-2 mb-2" :value="product.dimensions" />
-                                </div>
-                            </div>
-                        </div>
-                    </AccordionContent>
-                </AccordionPanel>
-            </Accordion>
+                        </AccordionContent>
+                    </AccordionPanel>
+                </Accordion>
+            </div>
         </template>
     </Card>
 </template>
@@ -274,11 +276,18 @@ const handleProductUpdate = (sku: number, productQuantity: number) => {
 .card {
     width: 25rem;
     --p-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-    flex: 1 1 250px;
+    flex: 0 0 25rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     padding: 1rem;
+}
+
+@media (max-width: 768px) {
+    .card {
+        width: 100%;
+        flex: 0 0 100%;
+    }
 }
 
 .measurement-header {
@@ -339,6 +348,11 @@ const handleProductUpdate = (sku: number, productQuantity: number) => {
     margin-right: 0;
 }
 
+.product-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
 .accordion-row {
     display: flex;
     width: 100%;
@@ -352,5 +366,13 @@ const handleProductUpdate = (sku: number, productQuantity: number) => {
 
 .accordion-left {
     flex: 0 0 3rem;
+}
+
+:deep(.p-autocomplete) {
+    width: 100%;
+}
+
+:deep(.p-autocomplete-input) {
+    width: 100%;
 }
 </style>

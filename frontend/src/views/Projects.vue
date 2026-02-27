@@ -116,9 +116,10 @@ const removeSpace = (index: number) => {
 .app-container {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   box-sizing: border-box;
-  height: 100%;
+  min-height: 100%;
+  padding: 1rem;
 }
 
 .dataview-wrapper {
@@ -157,5 +158,16 @@ const removeSpace = (index: number) => {
 
 .btn-outlined {
   margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .list-item {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .item-name {
+    flex: 1 1 100%;
+  }
 }
 </style>

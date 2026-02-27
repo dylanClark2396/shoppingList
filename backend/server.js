@@ -363,7 +363,7 @@ app.delete(
       return res.status(404).json({ error: 'Measurement not found' });
 
     measurement.products = (measurement.products || []).filter(
-      p => p.sku !== req.params.sku
+      p => p.sku !== Number(req.params.sku)
     );
 
     writeJsonAtomic(DATA_FILE, projects);
@@ -390,7 +390,7 @@ app.patch(
       return res.status(404).json({ error: 'Measurement not found' });
 
     const product = measurement.products?.find(
-      p => p.sku === req.params.sku
+      p => p.sku === Number(req.params.sku)
     );
     if (!product)
       return res.status(404).json({ error: 'Product not found' });

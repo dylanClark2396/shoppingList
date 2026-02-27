@@ -1,12 +1,11 @@
 <template>
+  <div class="page">
   <!-- header section -->
-  <div style="margin-bottom: 2rem;">
+  <div class="topbar">
+    <Button label="Back" outlined @click="router.push('/')" />
     <span class="topbar-title">
       {{ project?.name }} - {{ currentSpace?.name }}
     </span>
-    <div style="margin-left: 1rem;">
-      <Button label="Back" outlined size="large" @click="router.push('/')" />
-    </div>
   </div>
 
   <!-- Main content section -->
@@ -67,13 +66,13 @@
       <div class="cards-container">
         <MeasurementCardNew @create-measurement="handleCreateMeasurement"
           @update-measurement="handleUpdateMeasurement" />
-        <div v-for="value in getcurrentSpace()?.measurements" :key="value.id">
-          <MeasurementCard :measurement="value" :all-products="allProducts" @add-product="handleAddProduct"
-            @remove-product="handleRemoveProduct" @update-measurement="handleUpdateMeasurement"
-            @update-product-quantity="handleUpdateproductQuantity" @remove-measurement="handleDeleteMeasurement" />
-        </div>
+        <MeasurementCard v-for="value in getcurrentSpace()?.measurements" :key="value.id"
+          :measurement="value" :all-products="allProducts" @add-product="handleAddProduct"
+          @remove-product="handleRemoveProduct" @update-measurement="handleUpdateMeasurement"
+          @update-product-quantity="handleUpdateproductQuantity" @remove-measurement="handleDeleteMeasurement" />
       </div>
     </div>
+  </div>
   </div>
 </template>
 
@@ -287,40 +286,61 @@ async function handleUpdateproductQuantity(payload: {
 </script>
 
 <style scoped>
+/* ── Page wrapper ── */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Topbar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem 1.5rem;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
 .topbar-title {
-  font-size: 3rem;
+  font-size: 2rem;
   font-weight: 500;
   color: var(--p-surface-700);
-  line-height: 1;
-  margin-left: 1rem;
+  line-height: 1.1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.space-menu {
-  margin: 0 1rem 0 1rem;
-}
-
+/* ── Main layout ── */
 .layout {
   display: flex;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.space-menu {
+  margin: 0 1rem;
 }
 
 .left {
   flex: 0 0 230px;
+  overflow-y: auto;
 }
 
 .right {
   flex: 1;
-}
-
-.cards-container {
-  padding: 1rem;
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  overflow-y: auto;
-  height: 85vh;
+  flex-direction: column;
+  overflow: hidden;
 }
 
+/* ── Spaces sidebar ── */
 .spaces-title {
   font-size: 1.5rem;
   font-weight: 600;
@@ -332,7 +352,7 @@ async function handleUpdateproductQuantity(payload: {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-bottom: .5rem;
+  margin-bottom: 0.5rem;
 }
 
 .space-list {
@@ -368,6 +388,18 @@ async function handleUpdateproductQuantity(payload: {
   font-size: 0.95rem;
 }
 
+/* ── Cards ── */
+.cards-container {
+  padding: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-content: flex-start;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ── Space photos ── */
 .space-photos-bar {
   display: flex;
   flex-direction: column;
@@ -412,5 +444,55 @@ async function handleUpdateproductQuantity(payload: {
   width: 1.25rem !important;
   height: 1.25rem !important;
   padding: 0 !important;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .topbar-title {
+    font-size: 1.25rem;
+  }
+
+  .layout {
+    flex-direction: column;
+  }
+
+  .left {
+    flex: none;
+    width: 100%;
+  }
+
+  .space-menu {
+    margin: 0 0.5rem;
+  }
+
+  /* Spaces become a horizontal scrollable tab strip */
+  .space-list {
+    flex-direction: row;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .space-list-item {
+    flex-shrink: 0;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .space-list-label {
+    white-space: nowrap;
+    overflow: visible;
+  }
+
+  .cards-container {
+    height: auto;
+    min-height: 50vh;
+    padding: 0.5rem;
+  }
+
+  .space-photos-bar {
+    padding: 0.5rem 0.5rem 0.75rem;
+  }
 }
 </style>
