@@ -29,8 +29,8 @@ const client = new DynamoDBClient({
 })
 
 const db = DynamoDBDocumentClient.from(client)
-const PROJECT_TABLE = "Projects"
-const PRODUCTS_TABLE = "Products"
+const PROJECT_TABLE = "projects"
+const PRODUCTS_TABLE = "products"
 
 // =========================
 // 📸 S3 SETUP

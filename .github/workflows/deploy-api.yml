@@ -65,11 +65,13 @@ jobs:
               "set -euo pipefail",
 
               "# ── Pull latest build from S3 ──────────────────────────────",
+              "rm -f /tmp/api-release.zip",
               ("aws s3 cp s3://" + $b + "/api-release.zip /tmp/api-release.zip"),
 
               "# ── Extract to apps dir ────────────────────────────────────",
+              "rm -rf /home/ec2-user/apps",
               "mkdir -p /home/ec2-user/apps",
-              "unzip -o /tmp/api-release.zip -d /home/ec2-user/apps",
+              "unzip /tmp/api-release.zip -d /home/ec2-user/apps",
 
               "# ── Fix ownership (SSM runs as root) ───────────────────────",
               "chown -R ec2-user:ec2-user /home/ec2-user/apps",
