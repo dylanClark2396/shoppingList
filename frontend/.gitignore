@@ -13,7 +13,8 @@ dist
 dist-ssr
 coverage
 *.local
-public
+public/*
+!public/404.html
 
 # Editor directories and files
 .vscode
