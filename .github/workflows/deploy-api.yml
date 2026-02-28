@@ -1,6 +1,7 @@
 name: Deploy Express Backend (SSM + OIDC)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
