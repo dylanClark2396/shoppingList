@@ -19,6 +19,7 @@ declare module 'vue' {
     Button: typeof import('primevue/button')['default']
     Card: typeof import('primevue/card')['default']
     Chips: typeof import('primevue/chips')['default']
+    ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     DataView: typeof import('primevue/dataview')['default']
     Dropdown: typeof import('primevue/dropdown')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']

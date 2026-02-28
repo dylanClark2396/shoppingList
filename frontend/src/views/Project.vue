@@ -1,5 +1,6 @@
 <template>
   <div class="page">
+  <ConfirmDialog />
   <!-- header section -->
   <div class="topbar">
     <Button label="Back" outlined @click="router.push('/')" />
@@ -32,7 +33,7 @@
           :class="{ active: currentSpace?.id === space.id }" @click="currentSpace = space">
           <span class="space-list-label">{{ space.name }}</span>
           <Button icon="pi pi-times" size="small" text severity="danger" aria-label="Delete space"
-            @click.stop="handleDeleteSpace(space.id)" />
+            @click.stop="confirmDeleteSpace(space.id)" />
         </div>
       </div>
     </div>
@@ -82,6 +83,7 @@ import { onMounted, ref, watch } from "vue";
 import MeasurementCard from "@/components/MeasurementCard.vue";
 import router from "@/router";
 import { useRoute } from "vue-router";
+import { useConfirm } from "primevue/useconfirm";
 import type { Measurement, Product, Project, Space } from "@/models";
 import { useApi } from '@/composables/useApi';
 import MeasurementCardNew from "@/components/MeasurementCardNew.vue";
@@ -212,6 +214,19 @@ async function handleAddSpace() {
 
   newSpaceName.value = ''
   popover.value?.hide()
+}
+
+const confirm = useConfirm();
+
+function confirmDeleteSpace(spaceId: number) {
+  confirm.require({
+    message: 'Are you sure you want to delete this space?',
+    header: 'Delete Space',
+    icon: 'pi pi-exclamation-triangle',
+    rejectProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+    acceptProps: { label: 'Delete', severity: 'danger' },
+    accept: () => handleDeleteSpace(spaceId),
+  });
 }
 
 async function handleDeleteSpace(spaceId: number) {
@@ -353,6 +368,7 @@ async function handleUpdateproductQuantity(payload: {
   justify-content: space-between;
   width: 100%;
   margin-bottom: 0.5rem;
+  padding-right: 1.5rem;
 }
 
 .space-list {

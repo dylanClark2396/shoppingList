@@ -7,6 +7,15 @@
     <title>Settled Project Manager</title>
   </head>
   <body>
+    <script>
+      (function () {
+        var redirect = sessionStorage.getItem('spa-redirect');
+        if (redirect) {
+          sessionStorage.removeItem('spa-redirect');
+          history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

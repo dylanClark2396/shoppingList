@@ -156,18 +156,9 @@ const removeSpace = (index: number) => {
   font-weight: 500;
 }
 
-.btn-outlined {
-  margin-top: 8px;
-}
-
 @media (max-width: 768px) {
   .list-item {
-    flex-wrap: wrap;
     gap: 0.5rem;
-  }
-
-  .item-name {
-    flex: 1 1 100%;
   }
 }
 </style>
