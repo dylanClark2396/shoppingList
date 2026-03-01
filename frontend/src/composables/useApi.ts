@@ -2,6 +2,11 @@
 import type { Product, Measurement, Space, Project } from '@/models';
 import { API_ROUTES } from '@/apiRoutes';
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('access_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 async function safeJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const text = await res.text()
@@ -16,22 +21,25 @@ export function useApi() {
   // ========================
 
   const getProjects = async (): Promise<Project[]> => {
-    const res = await fetch(API_ROUTES.projects)
+    const res = await fetch(API_ROUTES.projects, {
+      headers: { ...authHeaders() },
+    })
     return safeJson<Project[]>(res)
   }
 
   const getProject = async (projectId: number): Promise<Project> => {
-    const res = await fetch(API_ROUTES.project(projectId))
+    const res = await fetch(API_ROUTES.project(projectId), {
+      headers: { ...authHeaders() },
+    })
     return safeJson<Project>(res)
   }
 
   const createProject = async (project: Partial<Project>): Promise<Project> => {
     const res = await fetch(API_ROUTES.createProject, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(project),
     })
-
     const data = await safeJson<{ project: Project }>(res)
     return data.project
   }
@@ -42,10 +50,9 @@ export function useApi() {
   ): Promise<Project> => {
     const res = await fetch(API_ROUTES.updateProject(projectId), {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(updates),
     })
-
     const data = await safeJson<{ project: Project }>(res)
     return data.project
   }
@@ -60,10 +67,9 @@ export function useApi() {
   ): Promise<Space> => {
     const res = await fetch(API_ROUTES.spaces(projectId), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(space),
     })
-
     const data = await safeJson<{ space: Space }>(res)
     return data.space
   }
@@ -75,23 +81,25 @@ export function useApi() {
   ): Promise<Space> => {
     const res = await fetch(API_ROUTES.space(projectId, spaceId), {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(updates),
     })
-
     const data = await safeJson<{ space: Space }>(res)
     return data.space
   }
 
   const deleteSpace = async (projectId: number, spaceId: number): Promise<void> => {
-    const res = await fetch(API_ROUTES.space(projectId, spaceId), { method: 'DELETE' })
+    const res = await fetch(API_ROUTES.space(projectId, spaceId), {
+      method: 'DELETE',
+      headers: { ...authHeaders() },
+    })
     if (!res.ok) throw new Error('Failed to delete space')
   }
 
   const deleteSpaceImage = async (projectId: number, spaceId: number, url: string): Promise<void> => {
     const res = await fetch(API_ROUTES.spaceImages(projectId, spaceId), {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ url }),
     })
     if (!res.ok) throw new Error('Failed to delete image')
@@ -104,13 +112,14 @@ export function useApi() {
     contentType: string
   ): Promise<{ uploadUrl: string; publicUrl: string }> => {
     const res = await fetch(
-      `${API_ROUTES.spaceUploadUrl(projectId, spaceId)}?filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(contentType)}`
+      `${API_ROUTES.spaceUploadUrl(projectId, spaceId)}?filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(contentType)}`,
+      { headers: { ...authHeaders() } }
     )
     return safeJson(res)
   }
 
   // ========================
-  // 📐 Measurements (NOW UNDER SPACE)
+  // 📐 Measurements
   // ========================
 
   const createMeasurement = async (
@@ -118,15 +127,11 @@ export function useApi() {
     spaceId: number,
     measurement: Partial<Measurement>
   ): Promise<Measurement> => {
-    const res = await fetch(
-      API_ROUTES.measurements(projectId, spaceId),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(measurement),
-      }
-    )
-
+    const res = await fetch(API_ROUTES.measurements(projectId, spaceId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(measurement),
+    })
     const data = await safeJson<{ measurement: Measurement }>(res)
     return data.measurement
   }
@@ -137,15 +142,11 @@ export function useApi() {
     measurementId: number,
     updates: Partial<Measurement>
   ): Promise<Measurement> => {
-    const res = await fetch(
-      API_ROUTES.measurement(projectId, spaceId, measurementId),
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      }
-    )
-
+    const res = await fetch(API_ROUTES.measurement(projectId, spaceId, measurementId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(updates),
+    })
     const data = await safeJson<{ measurement: Measurement }>(res)
     return data.measurement
   }
@@ -155,15 +156,15 @@ export function useApi() {
     spaceId: number,
     measurementId: number
   ): Promise<void> => {
-    const res = await fetch(
-      API_ROUTES.measurement(projectId, spaceId, measurementId),
-      { method: 'DELETE' }
-    )
+    const res = await fetch(API_ROUTES.measurement(projectId, spaceId, measurementId), {
+      method: 'DELETE',
+      headers: { ...authHeaders() },
+    })
     if (!res.ok) throw new Error('Failed to delete measurement')
   }
 
   // ========================
-  // 🛒 Products in Measurement (NOW UNDER SPACE)
+  // 🛒 Products in Measurement
   // ========================
 
   const addProductToMeasurement = async (
@@ -172,15 +173,11 @@ export function useApi() {
     measurementId: number,
     product: Product
   ): Promise<Product> => {
-    const res = await fetch(
-      API_ROUTES.addProductToMeasurement(projectId, spaceId, measurementId),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(product),
-      }
-    )
-
+    const res = await fetch(API_ROUTES.addProductToMeasurement(projectId, spaceId, measurementId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(product),
+    })
     const data = await safeJson<{ product: Product }>(res)
     return data.product
   }
@@ -192,39 +189,30 @@ export function useApi() {
     sku: number
   ): Promise<void> => {
     const res = await fetch(
-      API_ROUTES.removeProductFromMeasurement(
-        projectId,
-        spaceId,
-        measurementId,
-        sku
-      ),
-      { method: 'DELETE' }
+      API_ROUTES.removeProductFromMeasurement(projectId, spaceId, measurementId, sku),
+      {
+        method: 'DELETE',
+        headers: { ...authHeaders() },
+      }
     )
-
-    if (!res.ok) {
-      throw new Error('Failed to remove product')
-    }
+    if (!res.ok) throw new Error('Failed to remove product')
   }
 
   const updateProduct = async (
-  projectId: number,
-  spaceId: number,
-  measurementId: number,
-  sku: number,
-  updates: Partial<Product>
-): Promise<Product> => {
-  const res = await fetch(
-    API_ROUTES.updateProduct(projectId, spaceId, measurementId, sku),
-    {
+    projectId: number,
+    spaceId: number,
+    measurementId: number,
+    sku: number,
+    updates: Partial<Product>
+  ): Promise<Product> => {
+    const res = await fetch(API_ROUTES.updateProduct(projectId, spaceId, measurementId, sku), {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(updates),
-    }
-  )
-
-  const data = await safeJson<{ product: Product }>(res)
-  return data.product
-}
+    })
+    const data = await safeJson<{ product: Product }>(res)
+    return data.product
+  }
 
   // ========================
   // 🛍 Master Products
