@@ -349,7 +349,7 @@ const res = await fetch(API_ROUTES.projects, {
 - [x] `FEAT-002` — Pre-Sign-Up Lambda (invitations whitelist check)
 - [x] `FEAT-003` — Post-Confirmation Lambda (create user row, mark invite accepted)
 - [ ] `FEAT-004` — Provision `users` + `invitations` DynamoDB tables
-- [ ] `FEAT-005` — Migrate existing `projects` rows (add `owner_id`)
+- [x] `FEAT-005` — Migrate existing `projects` rows (add `owner_id`)
 - [ ] `FEAT-006` — `requireAuth` middleware + ownership guard on all project routes
 - [ ] `FEAT-007` — Lock CORS to `prjmanager.com`
 - [ ] `FEAT-008` — Frontend: `/login` + `/callback` routes + navigation guard
