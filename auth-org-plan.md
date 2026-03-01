@@ -355,8 +355,8 @@ const res = await fetch(API_ROUTES.projects, {
 - [x] `FEAT-008` — Frontend: `/login` + `/callback` routes + navigation guard
 - [x] `FEAT-009` — `useAuth` composable (login, handleCallback, logout)
 - [x] `FEAT-010` — `useApi.ts`: inject `Authorization` header on all fetch calls
-- [ ] `FEAT-011` — `LoginView.vue` + `CallbackView.vue` (PrimeVue components)
-- [ ] `FEAT-012` — Add Cognito env vars to GitHub Actions secrets + EC2 environment
+- [x] `FEAT-011` — `LoginView.vue` + `CallbackView.vue` (PrimeVue components)
+- [x] `FEAT-012` — Add Cognito env vars to GitHub Actions secrets + EC2 environment
 
 ---
 

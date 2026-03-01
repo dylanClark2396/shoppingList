@@ -36,9 +36,11 @@ jobs:
         working-directory: frontend
         run: pnpm install
 
-      - name: Set frontend API base URL
-        working-directory: frontend
-        run: echo "VITE_API_BASE=https://api.prjmanager.com" >> $GITHUB_ENV
+      - name: Set frontend env vars
+        run: |
+          echo "VITE_API_BASE=https://api.prjmanager.com" >> $GITHUB_ENV
+          echo "VITE_COGNITO_DOMAIN=${{ secrets.COGNITO_DOMAIN }}" >> $GITHUB_ENV
+          echo "VITE_COGNITO_CLIENT_ID=${{ secrets.COGNITO_CLIENT_ID }}" >> $GITHUB_ENV
 
       - name: Build project
         working-directory: frontend
