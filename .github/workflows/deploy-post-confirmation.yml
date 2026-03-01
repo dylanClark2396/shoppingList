@@ -1,0 +1,69 @@
+name: Deploy Post-Confirmation Lambda
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/lambda/post-confirmation/**'
+      - '.github/workflows/deploy-post-confirmation.yml'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies into package dir
+        working-directory: backend/lambda/post-confirmation
+        run: pip install -r requirements.txt -t ./package/
+
+      - name: Bundle Lambda zip
+        working-directory: backend/lambda/post-confirmation
+        run: |
+          cp lambda_function.py ./package/
+          cd package && zip -r $GITHUB_WORKSPACE/post-confirmation.zip .
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE }}
+          aws-region: us-east-2
+
+      - name: Upload zip to S3
+        run: aws s3 cp post-confirmation.zip s3://${{ secrets.DEPLOY_BUCKET }}/post-confirmation.zip
+
+      - name: Create or update Lambda function code
+        env:
+          LAMBDA_EXEC_ROLE: ${{ secrets.LAMBDA_EXEC_ROLE_ARN }}
+          DEPLOY_BUCKET: ${{ secrets.DEPLOY_BUCKET }}
+        run: |
+          if aws lambda get-function --function-name post-confirmation 2>/dev/null; then
+            echo "Function exists — updating code..."
+            aws lambda update-function-code \
+              --function-name post-confirmation \
+              --s3-bucket "$DEPLOY_BUCKET" \
+              --s3-key post-confirmation.zip
+          else
+            echo "Function does not exist — creating..."
+            aws lambda create-function \
+              --function-name post-confirmation \
+              --runtime python3.12 \
+              --handler lambda_function.handler \
+              --role "$LAMBDA_EXEC_ROLE" \
+              --code "S3Bucket=$DEPLOY_BUCKET,S3Key=post-confirmation.zip"
+          fi
+
+      - name: Wait for function update to finish
+        run: aws lambda wait function-updated --function-name post-confirmation
