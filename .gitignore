@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node
+node_modules/
+dist/
+.env
+*.local
+
+# Python
+python/venv/
+python/__pycache__/
+python/output/
+*.pyc
+
+# Editor
+.vscode/
+.idea/
