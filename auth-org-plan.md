@@ -346,7 +346,7 @@ const res = await fetch(API_ROUTES.projects, {
 ### 5. Feature Checklist (v1)
 
 - [x] `FEAT-001` — Cognito User Pool + Google OAuth (AWS Console)
-- [ ] `FEAT-002` — Pre-Sign-Up Lambda (invitations whitelist check)
+- [x] `FEAT-002` — Pre-Sign-Up Lambda (invitations whitelist check)
 - [ ] `FEAT-003` — Post-Confirmation Lambda (create user row, mark invite accepted)
 - [ ] `FEAT-004` — Provision `users` + `invitations` DynamoDB tables
 - [ ] `FEAT-005` — Migrate existing `projects` rows (add `owner_id`)

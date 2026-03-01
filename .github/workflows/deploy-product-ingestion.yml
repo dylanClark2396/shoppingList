@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'backend/product-ingestion/**'
+      - 'backend/lambda/product-ingestion/**'
       - '.github/workflows/deploy-product-ingestion.yml'
 
 permissions:
@@ -27,11 +27,11 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies into package dir
-        working-directory: backend/product-ingestion
+        working-directory: backend/lambda/product-ingestion
         run: pip install -r requirements.txt -t ./package/
 
       - name: Bundle Lambda zip
-        working-directory: backend/product-ingestion
+        working-directory: backend/lambda/product-ingestion
         run: |
           cp lambda_function.py ./package/
           cd package && zip -r $GITHUB_WORKSPACE/product-ingestion.zip .
