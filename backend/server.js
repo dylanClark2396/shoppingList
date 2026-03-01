@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express'
 import cors from 'cors'
+import { CognitoJwtVerifier } from 'aws-jwt-verify'
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
 import {
   DynamoDBDocumentClient,
@@ -17,15 +18,36 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 // =========================
 
 const app = express()
-app.use(cors())
+app.use(cors({ origin: ['https://prjmanager.com', 'http://localhost:5173'] }))
 app.use(express.json())
+
+// =========================
+// 🔐 AUTH
+// =========================
+
+const verifier = CognitoJwtVerifier.create({
+  userPoolId: process.env.COGNITO_USER_POOL_ID,
+  tokenUse: 'access',
+  clientId: process.env.COGNITO_CLIENT_ID,
+})
+
+const requireAuth = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1]
+  if (!token) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    req.user = await verifier.verify(token)
+    next()
+  } catch {
+    res.status(401).json({ error: 'Invalid token' })
+  }
+}
 
 // =========================
 // 🗄 DYNAMODB SETUP
 // =========================
 
 const client = new DynamoDBClient({
-  region: "us-east-2" // change if needed
+  region: "us-east-2"
 })
 
 const db = DynamoDBDocumentClient.from(client)
@@ -79,10 +101,12 @@ app.get('/health', (req, res) => {
 // 📦 PROJECT ROUTES
 // =========================
 
-app.get('/projects', async (req, res) => {
+app.get('/projects', requireAuth, async (req, res) => {
   try {
     const result = await db.send(new ScanCommand({
-      TableName: PROJECT_TABLE
+      TableName: PROJECT_TABLE,
+      FilterExpression: 'owner_id = :uid',
+      ExpressionAttributeValues: { ':uid': req.user.sub },
     }))
     res.json(result.Items || [])
   } catch (err) {
@@ -91,10 +115,11 @@ app.get('/projects', async (req, res) => {
   }
 })
 
-app.get('/projects/:id', async (req, res) => {
+app.get('/projects/:id', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.id)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
     res.json(project)
   } catch (err) {
     console.error(err)
@@ -102,7 +127,7 @@ app.get('/projects/:id', async (req, res) => {
   }
 })
 
-app.post('/projects', async (req, res) => {
+app.post('/projects', requireAuth, async (req, res) => {
   try {
     const newProject = {
       id: generateId(),
@@ -111,7 +136,9 @@ app.post('/projects', async (req, res) => {
         id: generateId(),
         name: s.name ?? s,
         measurements: []
-      }))
+      })),
+      owner_id: req.user.sub,
+      created_at: Date.now(),
     }
 
     await saveProject(newProject)
@@ -123,10 +150,11 @@ app.post('/projects', async (req, res) => {
   }
 })
 
-app.patch('/projects/:id', async (req, res) => {
+app.patch('/projects/:id', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.id)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     Object.assign(project, req.body)
     await saveProject(project)
@@ -138,8 +166,12 @@ app.patch('/projects/:id', async (req, res) => {
   }
 })
 
-app.delete('/projects/:id', async (req, res) => {
+app.delete('/projects/:id', requireAuth, async (req, res) => {
   try {
+    const project = await getProject(req.params.id)
+    if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
+
     await db.send(new DeleteCommand({
       TableName: PROJECT_TABLE,
       Key: { id: Number(req.params.id) }
@@ -156,10 +188,11 @@ app.delete('/projects/:id', async (req, res) => {
 // =========================
 
 // ➕ Add space
-app.post('/projects/:projectId/spaces', async (req, res) => {
+app.post('/projects/:projectId/spaces', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = {
       id: generateId(),
@@ -180,10 +213,11 @@ app.post('/projects/:projectId/spaces', async (req, res) => {
 })
 
 // ✏️ Update space
-app.patch('/projects/:projectId/spaces/:spaceId', async (req, res) => {
+app.patch('/projects/:projectId/spaces/:spaceId', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = project.spaces?.find(s => s.id === Number(req.params.spaceId))
     if (!space) return res.status(404).json({ error: 'Space not found' })
@@ -199,8 +233,12 @@ app.patch('/projects/:projectId/spaces/:spaceId', async (req, res) => {
 })
 
 // 📸 Presigned upload URL for space photo
-app.get('/projects/:projectId/spaces/:spaceId/upload-url', async (req, res) => {
+app.get('/projects/:projectId/spaces/:spaceId/upload-url', requireAuth, async (req, res) => {
   try {
+    const project = await getProject(req.params.projectId)
+    if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
+
     const { filename, contentType } = req.query
     if (!filename) return res.status(400).json({ error: 'filename required' })
 
@@ -221,7 +259,7 @@ app.get('/projects/:projectId/spaces/:spaceId/upload-url', async (req, res) => {
 })
 
 // 🗑 Delete space photo
-app.delete('/projects/:projectId/spaces/:spaceId/images', async (req, res) => {
+app.delete('/projects/:projectId/spaces/:spaceId/images', requireAuth, async (req, res) => {
   try {
     const { url } = req.body
     if (!url) return res.status(400).json({ error: 'url required' })
@@ -231,6 +269,7 @@ app.delete('/projects/:projectId/spaces/:spaceId/images', async (req, res) => {
 
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = project.spaces?.find(s => s.id === Number(req.params.spaceId))
     if (!space) return res.status(404).json({ error: 'Space not found' })
@@ -246,10 +285,11 @@ app.delete('/projects/:projectId/spaces/:spaceId/images', async (req, res) => {
 })
 
 // ❌ Delete space
-app.delete('/projects/:projectId/spaces/:spaceId', async (req, res) => {
+app.delete('/projects/:projectId/spaces/:spaceId', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     project.spaces = (project.spaces || []).filter(s => s.id !== Number(req.params.spaceId))
 
@@ -266,10 +306,11 @@ app.delete('/projects/:projectId/spaces/:spaceId', async (req, res) => {
 // =========================
 
 // ➕ Add measurement
-app.post('/projects/:projectId/spaces/:spaceId/measurements', async (req, res) => {
+app.post('/projects/:projectId/spaces/:spaceId/measurements', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = project.spaces?.find(s => s.id === Number(req.params.spaceId))
     if (!space) return res.status(404).json({ error: 'Space not found' })
@@ -293,10 +334,11 @@ app.post('/projects/:projectId/spaces/:spaceId/measurements', async (req, res) =
 })
 
 // ✏️ Update measurement
-app.patch('/projects/:projectId/spaces/:spaceId/measurements/:measurementId', async (req, res) => {
+app.patch('/projects/:projectId/spaces/:spaceId/measurements/:measurementId', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = project.spaces?.find(s => s.id === Number(req.params.spaceId))
     if (!space) return res.status(404).json({ error: 'Space not found' })
@@ -315,10 +357,11 @@ app.patch('/projects/:projectId/spaces/:spaceId/measurements/:measurementId', as
 })
 
 // ❌ Delete measurement
-app.delete('/projects/:projectId/spaces/:spaceId/measurements/:measurementId', async (req, res) => {
+app.delete('/projects/:projectId/spaces/:spaceId/measurements/:measurementId', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = project.spaces?.find(s => s.id === Number(req.params.spaceId))
     if (!space) return res.status(404).json({ error: 'Space not found' })
@@ -338,10 +381,11 @@ app.delete('/projects/:projectId/spaces/:spaceId/measurements/:measurementId', a
 // =========================
 
 // ➕ Add product
-app.post('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products', async (req, res) => {
+app.post('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = project.spaces?.find(s => s.id === Number(req.params.spaceId))
     if (!space) return res.status(404).json({ error: 'Space not found' })
@@ -367,10 +411,11 @@ app.post('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/produ
 })
 
 // ❌ Remove product
-app.delete('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products/:sku', async (req, res) => {
+app.delete('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products/:sku', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = project.spaces?.find(s => s.id === Number(req.params.spaceId))
     if (!space) return res.status(404).json({ error: 'Space not found' })
@@ -389,10 +434,11 @@ app.delete('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/pro
 })
 
 // ✏️ Update product
-app.patch('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products/:sku', async (req, res) => {
+app.patch('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/products/:sku', requireAuth, async (req, res) => {
   try {
     const project = await getProject(req.params.projectId)
     if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
     const space = project.spaces?.find(s => s.id === Number(req.params.spaceId))
     if (!space) return res.status(404).json({ error: 'Space not found' })

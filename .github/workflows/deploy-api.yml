@@ -56,12 +56,16 @@ jobs:
           DEPLOY_BUCKET: ${{ secrets.DEPLOY_BUCKET }}
           EC2_INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
           S3_IMAGES_BUCKET: ${{ secrets.S3_IMAGES_BUCKET }}
+          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
+          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
         run: |
           # Build the SSM parameters JSON safely using jq so secrets
           # with special characters don't break shell quoting.
           PARAMS=$(jq -n \
-            --arg b  "$DEPLOY_BUCKET" \
-            --arg ib "$S3_IMAGES_BUCKET" \
+            --arg b   "$DEPLOY_BUCKET" \
+            --arg ib  "$S3_IMAGES_BUCKET" \
+            --arg upid "$COGNITO_USER_POOL_ID" \
+            --arg cid  "$COGNITO_CLIENT_ID" \
             '{commands: [
               "set -euo pipefail",
 
@@ -77,9 +81,11 @@ jobs:
               "# ── Fix ownership (SSM runs as root) ───────────────────────",
               "chown -R ec2-user:ec2-user /home/ec2-user/apps",
 
-              "# ── Write / update S3_IMAGES_BUCKET in .env ─────────────────",
+              "# ── Write / update env vars in .env ──────────────────────",
               "touch /home/ec2-user/apps/.env",
               ("sed -i \"/^S3_IMAGES_BUCKET=/d\" /home/ec2-user/apps/.env && printf \"S3_IMAGES_BUCKET=" + $ib + "\\n\" >> /home/ec2-user/apps/.env"),
+              ("sed -i \"/^COGNITO_USER_POOL_ID=/d\" /home/ec2-user/apps/.env && printf \"COGNITO_USER_POOL_ID=" + $upid + "\\n\" >> /home/ec2-user/apps/.env"),
+              ("sed -i \"/^COGNITO_CLIENT_ID=/d\" /home/ec2-user/apps/.env && printf \"COGNITO_CLIENT_ID=" + $cid + "\\n\" >> /home/ec2-user/apps/.env"),
               "chown ec2-user:ec2-user /home/ec2-user/apps/.env",
 
               "# ── Restart server via pm2 as ec2-user ─────────────────────",

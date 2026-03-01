@@ -20,6 +20,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.998.0
         version: 3.998.0
+      aws-jwt-verify:
+        specifier: ^5.1.1
+        version: 5.1.1
       cors:
         specifier: ^2.8.6
         version: 2.8.6
@@ -613,6 +616,10 @@ packages:
   anymatch@3.1.3:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
+
+  aws-jwt-verify@5.1.1:
+    resolution: {integrity: sha512-j6whGdGJmQ27agk4ijY8RPv6itb8JLb7SCJ86fEnneTcSBrpxuwL8kLq6y5WVH95aIknyAloEqAsaOLS1J8ITQ==}
+    engines: {node: '>=18.0.0'}
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
@@ -1976,6 +1983,8 @@ snapshots:
     dependencies:
       normalize-path: 3.0.0
       picomatch: 2.3.1
+
+  aws-jwt-verify@5.1.1: {}
 
   balanced-match@1.0.2: {}
 
