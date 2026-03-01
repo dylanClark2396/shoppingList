@@ -352,7 +352,7 @@ const res = await fetch(API_ROUTES.projects, {
 - [x] `FEAT-005` — Migrate existing `projects` rows (add `owner_id`)
 - [x] `FEAT-006` — `requireAuth` middleware + ownership guard on all project routes
 - [x] `FEAT-007` — Lock CORS to `prjmanager.com`
-- [ ] `FEAT-008` — Frontend: `/login` + `/callback` routes + navigation guard
+- [x] `FEAT-008` — Frontend: `/login` + `/callback` routes + navigation guard
 - [ ] `FEAT-009` — `useAuth` composable (login, handleCallback, logout)
 - [ ] `FEAT-010` — `useApi.ts`: inject `Authorization` header on all fetch calls
 - [ ] `FEAT-011` — `LoginView.vue` + `CallbackView.vue` (PrimeVue components)
