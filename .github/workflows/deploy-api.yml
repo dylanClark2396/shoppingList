@@ -81,15 +81,15 @@ jobs:
               "# ── Fix ownership (SSM runs as root) ───────────────────────",
               "chown -R ec2-user:ec2-user /home/ec2-user/apps",
 
-              "# ── Write / update env vars in .env (dist/ is cwd for node) ──",
-              "touch /home/ec2-user/apps/dist/.env",
-              ("sed -i \"/^S3_IMAGES_BUCKET=/d\" /home/ec2-user/apps/dist/.env && printf \"S3_IMAGES_BUCKET=" + $ib + "\\n\" >> /home/ec2-user/apps/dist/.env"),
-              ("sed -i \"/^COGNITO_USER_POOL_ID=/d\" /home/ec2-user/apps/dist/.env && printf \"COGNITO_USER_POOL_ID=" + $upid + "\\n\" >> /home/ec2-user/apps/dist/.env"),
-              ("sed -i \"/^COGNITO_CLIENT_ID=/d\" /home/ec2-user/apps/dist/.env && printf \"COGNITO_CLIENT_ID=" + $cid + "\\n\" >> /home/ec2-user/apps/dist/.env"),
-              "chown ec2-user:ec2-user /home/ec2-user/apps/dist/.env",
+              "# ── Write / update env vars in .env ─────────────────────────",
+              "touch /home/ec2-user/apps/.env",
+              ("sed -i \"/^S3_IMAGES_BUCKET=/d\" /home/ec2-user/apps/.env && printf \"S3_IMAGES_BUCKET=" + $ib + "\\n\" >> /home/ec2-user/apps/.env"),
+              ("sed -i \"/^COGNITO_USER_POOL_ID=/d\" /home/ec2-user/apps/.env && printf \"COGNITO_USER_POOL_ID=" + $upid + "\\n\" >> /home/ec2-user/apps/.env"),
+              ("sed -i \"/^COGNITO_CLIENT_ID=/d\" /home/ec2-user/apps/.env && printf \"COGNITO_CLIENT_ID=" + $cid + "\\n\" >> /home/ec2-user/apps/.env"),
+              "chown ec2-user:ec2-user /home/ec2-user/apps/.env",
 
-              "# ── Restart server via pm2 as ec2-user ─────────────────────",
-              "runuser -l ec2-user -c \"pm2 restart server 2>/dev/null || pm2 start /home/ec2-user/apps/dist/server.js --name server\""
+              "# ── Restart server via pm2 from apps/ so dotenv finds .env ──",
+              "runuser -l ec2-user -c \"pm2 delete server 2>/dev/null; cd /home/ec2-user/apps && pm2 start dist/server.js --name server\""
             ]}')
 
           COMMAND_ID=$(aws ssm send-command \
