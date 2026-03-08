@@ -19,7 +19,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 // =========================
 
 const app = express()
-app.use(cors({ origin: ['https://prjmanager.com', 'http://localhost:5173'] }))
+app.use(cors({ origin: ['https://prjmanager.com', 'https://www.prjmanager.com', 'http://localhost:5173'] }))
 app.use(express.json())
 
 // =========================
