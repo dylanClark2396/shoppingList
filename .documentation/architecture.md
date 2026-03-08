@@ -11,34 +11,34 @@ The system has three main sub-projects: a Vue 3 frontend SPA, a Node.js Express 
 ## System Diagram
 
 ```
-Browser (prjmanager.com)
-        |
-        | HTTPS
-        v
-  GitHub Pages          AWS Cognito (hosted UI)
-  Vue 3 SPA  <----OAuth2 authorization code---->  Cognito User Pool
-        |
-        | Bearer JWT (access token)
-        v
+                         ┌─────────────────────────────────┐
+                         │        AWS Cognito               │
+                         │  ┌─────────────────────────┐    │
+  ┌──────────────┐  OAuth2│  │     Hosted UI           │    │
+  │ GitHub Pages │◄──────►│  │  (login / sign-up)      │    │
+  │  Vue 3 SPA   │        │  └─────────────────────────┘    │
+  │prjmanager.com│        │  Pre Sign-Up ──► Lambda         │
+  └──────┬───────┘        │  Post Confirm ──► Lambda        │
+         │                └─────────────────────────────────┘
+         │ Bearer JWT
+         ▼
   api.prjmanager.com
-  API Gateway HTTP API
-        |
-        v
+  API Gateway HTTP API (us-east-2)
+         │
+         ▼
   Lambda: prjmanager-api
-  Express + @vendia/serverless-express
-        |
-        +----> DynamoDB: projects table
-        +----> DynamoDB: products table
-        +----> S3: space images bucket (presigned upload URLs)
+  Node.js / Express / @vendia/serverless-express
+         │
+         ├──► DynamoDB: projects   (us-east-2)
+         ├──► DynamoDB: products   (us-east-2, read-only)
+         └──► S3: space images bucket (presigned PUT URLs)
 
-  S3: convert-product-excel bucket
-        |
-        | s3:ObjectCreated trigger
-        v
+  S3: convert-product-excel
+         │  s3:ObjectCreated
+         ▼
   Lambda: product-ingestion
-        |
-        +----> DynamoDB: products table
-        +----> S3: product images bucket
+         ├──► DynamoDB: products   (full replace on ingest)
+         └──► S3: product images bucket
 ```
 
 ---
@@ -47,7 +47,7 @@ Browser (prjmanager.com)
 
 **Stack:** Vue 3, TypeScript, Vite, Vue Router, PrimeVue (Aura theme)
 
-**Hosted on:** GitHub Pages (`prjmanager.com`)
+**Hosted on:** GitHub Pages (`prjmanager.com` + `www.prjmanager.com`)
 
 **Key files:**
 
@@ -253,7 +253,7 @@ All workflows trigger on push to `main` for their respective paths. AWS credenti
 | `VITE_COGNITO_DOMAIN` | Cognito hosted UI domain |
 | `VITE_COGNITO_CLIENT_ID` | Cognito app client ID |
 
-### Backend (runtime `.env` on EC2)
+### Backend (Lambda environment variables, set via CloudFormation parameters)
 
 | Variable | Description |
 |----------|-------------|
