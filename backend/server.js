@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import serverless from '@vendia/serverless-express'
 import express from 'express'
 import cors from 'cors'
 import { CognitoJwtVerifier } from 'aws-jwt-verify'
@@ -508,6 +509,10 @@ app.get('/products/:id', async (req, res) => {
 // 🚀 START SERVER
 // =========================
 
-app.listen(3000, "0.0.0.0", () => {
-  console.log('Server running on port 3000')
-})
+// Lambda handler
+export const handler = serverless({ app })
+
+// Local dev only
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.listen(3000, '0.0.0.0', () => console.log('Server running on port 3000'))
+}

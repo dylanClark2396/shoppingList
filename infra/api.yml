@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: prjmanager API - Lambda + API Gateway HTTP API
+
+Parameters:
+  DeployBucket:
+    Type: String
+    Description: S3 bucket used for deployment artifacts
+
+  CognitoUserPoolId:
+    Type: String
+
+  CognitoClientId:
+    Type: String
+
+  S3ImagesBucket:
+    Type: String
+    Description: S3 bucket for space photo uploads
+
+Resources:
+
+  # ──────────────────────────────────────────────
+  # ACM Certificate (DNS-validated, us-east-2)
+  # ──────────────────────────────────────────────
+
+  # NOTE: On first deploy, CloudFormation will pause here until the certificate is validated.
+  # Go to ACM in the AWS console (us-east-2), find the pending certificate for api.prjmanager.com,
+  # copy the CNAME name/value, and add it as a CNAME record in Namecheap. The stack will
+  # resume automatically once ACM detects the record (usually within a few minutes).
+  ApiCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: api.prjmanager.com
+      ValidationMethod: DNS
+
+  # ──────────────────────────────────────────────
+  # IAM
+  # ──────────────────────────────────────────────
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: prjmanager-api-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: api-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                Resource:
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/projects
+                  - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/products
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub arn:aws:s3:::${S3ImagesBucket}/*
+
+  # ──────────────────────────────────────────────
+  # Lambda
+  # ──────────────────────────────────────────────
+
+  ApiFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: prjmanager-api
+      Runtime: nodejs20.x
+      Handler: dist/server.handler
+      Role: !GetAtt ExecutionRole.Arn
+      Code:
+        S3Bucket: !Ref DeployBucket
+        S3Key: api-release.zip
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+          COGNITO_CLIENT_ID: !Ref CognitoClientId
+          S3_IMAGES_BUCKET: !Ref S3ImagesBucket
+
+  LambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*/*
+
+  # ──────────────────────────────────────────────
+  # API Gateway HTTP API
+  # ──────────────────────────────────────────────
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: prjmanager-api
+      ProtocolType: HTTP
+
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiFunction.Arn}/invocations
+      PayloadFormatVersion: '2.0'
+
+  DefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: $default
+      Target: !Sub integrations/${Integration}
+
+  Stage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+
+  # ──────────────────────────────────────────────
+  # Custom domain
+  # ──────────────────────────────────────────────
+
+  CustomDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: api.prjmanager.com
+      DomainNameConfigurations:
+        - CertificateArn: !Ref ApiCertificate
+          EndpointType: REGIONAL
+
+  ApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      DomainName: !Ref CustomDomain
+      Stage: $default
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway invoke URL (use custom domain in production)
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com
+
+  CustomDomainTarget:
+    Description: Point your api.prjmanager.com DNS CNAME to this value
+    Value: !GetAtt CustomDomain.RegionalDomainName

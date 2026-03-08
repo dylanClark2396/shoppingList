@@ -20,8 +20,12 @@ Browser (prjmanager.com)
         |
         | Bearer JWT (access token)
         v
-  api.prjmanager.com (EC2, pm2)
-  Express REST API
+  api.prjmanager.com
+  API Gateway HTTP API
+        |
+        v
+  Lambda: prjmanager-api
+  Express + @vendia/serverless-express
         |
         +----> DynamoDB: projects table
         +----> DynamoDB: products table
@@ -73,9 +77,9 @@ Browser (prjmanager.com)
 
 ## Backend (`backend/server.js`)
 
-**Stack:** Node.js, Express, AWS SDK v3
+**Stack:** Node.js, Express, `@vendia/serverless-express`, AWS SDK v3
 
-**Hosted on:** AWS EC2, managed by pm2, listening on port `0.0.0.0:3000`
+**Hosted on:** AWS Lambda (`prjmanager-api`) behind API Gateway HTTP API (`api.prjmanager.com`)
 
 **External services used:**
 
@@ -230,12 +234,12 @@ All workflows trigger on push to `main` for their respective paths. AWS credenti
 | Workflow | Trigger path | What it does |
 |----------|-------------|--------------|
 | `deploy-frontend.yml` | `frontend/**` | `pnpm build` → deploy to GitHub Pages |
-| `deploy-api.yml` | `backend/**` | esbuild bundle → zip → S3 → EC2 via SSM RunShellScript (pm2 restart) |
+| `deploy-api.yml` | `backend/**`, `infra/api.yml` | esbuild bundle → zip → S3 → `cloudformation deploy` → `lambda update-function-code` |
 | `deploy-product-ingestion.yml` | `backend/lambda/product-ingestion/**` | pip bundle → zip → S3 → Lambda create/update + S3 trigger config |
 | `deploy-post-confirmation.yml` | `backend/lambda/post-confirmation/**` | pip bundle → zip → S3 → Lambda create/update |
 | `deploy-pre-sign-up.yml` | `backend/lambda/pre-sign-up/**` | pip bundle → zip → S3 → Lambda create/update |
 
-**Backend deployment detail:** The SSM command on EC2 downloads the zip from S3, extracts to `/home/ec2-user/apps/`, writes a `.env` file with secrets injected as SSM parameters, then runs `pm2 start dist/server.js --name server`.
+**Backend deployment detail:** The workflow builds the bundle, uploads `api-release.zip` to S3, then runs `cloudformation deploy` against `infra/api.yml` to create or update the Lambda function and API Gateway stack. A follow-up `lambda update-function-code` call forces the function to pick up the new zip (CloudFormation won't redeploy code if the S3 key is unchanged).
 
 ---
 
