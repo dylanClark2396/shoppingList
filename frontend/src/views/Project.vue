@@ -30,11 +30,21 @@
 
       <div class="space-list">
         <div v-for="space in project?.spaces" :key="space.id" class="space-list-item"
-          :class="{ active: currentSpace?.id === space.id }" @click="currentSpace = space">
+          :class="{ active: currentView === 'spaces' && currentSpace?.id === space.id }"
+          @click="currentView = 'spaces'; currentSpace = space">
           <span class="space-list-label">{{ space.name }}</span>
           <Button icon="pi pi-times" size="small" text severity="danger" aria-label="Delete space"
             @click.stop="confirmDeleteSpace(space.id)" />
         </div>
+      </div>
+
+      <div
+        class="space-list-item labels-nav-item"
+        :class="{ active: currentView === 'labels' }"
+        @click="currentView = 'labels'"
+      >
+        <i class="pi pi-tag" style="margin-right: 0.4rem; font-size: 0.85rem;" />
+        <span class="space-list-label">Labels</span>
       </div>
     </div>
 
@@ -42,15 +52,24 @@
 
     <!-- measurement module section -->
     <div class="right">
+      <!-- labels panel -->
+      <LabelsPanel
+        v-if="currentView === 'labels' && project"
+        :project="project"
+        @label-created="handleLabelCreated"
+        @label-updated="handleLabelUpdated"
+        @label-deleted="handleLabelDeleted"
+      />
+
       <!-- space photos -->
-      <div v-if="currentSpace" class="space-photos-bar">
+      <div v-if="currentView === 'spaces' && currentSpace" class="space-photos-bar">
         <label class="upload-btn">
           <i class="pi pi-image" style="margin-right: 0.25rem;" />
           Add Photo
           <input type="file" multiple accept="image/*" style="display: none;" @change="handleSpacePhotoUpload" />
         </label>
         <div class="photo-thumbs-row">
-          <div v-for="url in currentSpace.images" :key="url" class="photo-thumb-wrapper">
+          <div v-for="url in currentSpace!.images" :key="url" class="photo-thumb-wrapper">
             <Image :src="url" alt="Space photo" width="80" preview />
             <Button
               icon="pi pi-times"
@@ -64,7 +83,7 @@
         </div>
       </div>
 
-      <div class="cards-container">
+      <div v-if="currentView === 'spaces'" class="cards-container">
         <MeasurementCardNew @create-measurement="handleCreateMeasurement"
           @update-measurement="handleUpdateMeasurement" />
         <MeasurementCard v-for="value in getcurrentSpace()?.measurements" :key="value.id"
@@ -81,10 +100,11 @@
 
 import { onMounted, ref, watch } from "vue";
 import MeasurementCard from "@/components/MeasurementCard.vue";
+import LabelsPanel from "@/components/LabelsPanel.vue";
 import router from "@/router";
 import { useRoute } from "vue-router";
 import { useConfirm } from "primevue/useconfirm";
-import type { Measurement, Product, Project, Space } from "@/models";
+import type { Label, Measurement, Product, Project, Space } from "@/models";
 import { useApi } from '@/composables/useApi';
 import MeasurementCardNew from "@/components/MeasurementCardNew.vue";
 
@@ -101,12 +121,16 @@ const {
   getSpaceUploadUrl,
   deleteSpaceImage,
   removeProductFromMeasurement,
-  updateProduct
+  updateProduct,
+  createLabel,
+  updateLabel,
+  deleteLabel,
 } = useApi();
 
 const route = useRoute();
 const project = ref<Project | null>(null);
 const currentSpace = ref<Space>();
+const currentView = ref<'spaces' | 'labels'>('spaces');
 const allProducts = ref<Product[]>([]);
 
 watch(() => route.params.id, loadProject);
@@ -298,6 +322,24 @@ async function handleUpdateproductQuantity(payload: {
 
 }
 
+async function handleLabelCreated(label: Omit<Label, 'id'>) {
+  if (!project.value) return
+  const newLabel = await createLabel(Number(project.value.id), label)
+  project.value.labels = [...(project.value.labels ?? []), newLabel]
+}
+
+async function handleLabelUpdated(label: Label) {
+  if (!project.value) return
+  const updated = await updateLabel(Number(project.value.id), label.id, label)
+  project.value.labels = project.value.labels?.map(l => l.id === updated.id ? updated : l)
+}
+
+async function handleLabelDeleted(labelId: number) {
+  if (!project.value) return
+  await deleteLabel(Number(project.value.id), labelId)
+  project.value.labels = project.value.labels?.filter(l => l.id !== labelId)
+}
+
 </script>
 
 <style scoped>
@@ -461,6 +503,12 @@ async function handleUpdateproductQuantity(payload: {
   width: 1.25rem !important;
   height: 1.25rem !important;
   padding: 0 !important;
+}
+
+.labels-nav-item {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--p-surface-200);
+  padding-top: 0.6rem;
 }
 
 /* ── Mobile ── */

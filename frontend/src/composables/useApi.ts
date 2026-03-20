@@ -1,5 +1,5 @@
 // composables/useApi.ts
-import type { Product, Measurement, Space, Project } from '@/models';
+import type { Product, Measurement, Space, Project, Label } from '@/models';
 import { API_ROUTES } from '@/apiRoutes';
 
 function authHeaders(): Record<string, string> {
@@ -215,6 +215,38 @@ export function useApi() {
   }
 
   // ========================
+  // 🏷 Labels
+  // ========================
+
+  const createLabel = async (projectId: number, label: Omit<Label, 'id'>): Promise<Label> => {
+    const res = await fetch(API_ROUTES.labels(projectId), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(label),
+    })
+    const data = await safeJson<{ label: Label }>(res)
+    return data.label
+  }
+
+  const updateLabel = async (projectId: number, labelId: number, updates: Partial<Label>): Promise<Label> => {
+    const res = await fetch(API_ROUTES.label(projectId, labelId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(updates),
+    })
+    const data = await safeJson<{ label: Label }>(res)
+    return data.label
+  }
+
+  const deleteLabel = async (projectId: number, labelId: number): Promise<void> => {
+    const res = await fetch(API_ROUTES.label(projectId, labelId), {
+      method: 'DELETE',
+      headers: { ...authHeaders() },
+    })
+    if (!res.ok) throw new Error('Failed to delete label')
+  }
+
+  // ========================
   // 🛍 Master Products
   // ========================
 
@@ -246,5 +278,8 @@ export function useApi() {
     updateProduct,
     getProducts,
     getProduct,
+    createLabel,
+    updateLabel,
+    deleteLabel,
   }
 }

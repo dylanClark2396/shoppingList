@@ -471,6 +471,76 @@ app.patch('/projects/:projectId/spaces/:spaceId/measurements/:measurementId/prod
 })
 
 // =========================
+// 🏷 LABELS
+// =========================
+
+// ➕ Add label
+app.post('/projects/:projectId/labels', requireAuth, async (req, res) => {
+  try {
+    const project = await getProject(req.params.projectId)
+    if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
+
+    const { machine, substrate, color, labelName, spaceName } = req.body
+    if (!['P-touch', 'Cricut'].includes(machine)) {
+      return res.status(400).json({ error: 'Invalid machine' })
+    }
+
+    const label = { id: generateId(), machine, substrate, color, labelName, spaceName }
+
+    project.labels = project.labels || []
+    project.labels.push(label)
+
+    await saveProject(project)
+    res.json({ status: 'ok', label })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to add label' })
+  }
+})
+
+// ✏️ Update label
+app.patch('/projects/:projectId/labels/:labelId', requireAuth, async (req, res) => {
+  try {
+    const project = await getProject(req.params.projectId)
+    if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
+
+    const label = project.labels?.find(l => l.id === Number(req.params.labelId))
+    if (!label) return res.status(404).json({ error: 'Label not found' })
+
+    if (req.body.machine && !['P-touch', 'Cricut'].includes(req.body.machine)) {
+      return res.status(400).json({ error: 'Invalid machine' })
+    }
+
+    Object.assign(label, req.body)
+
+    await saveProject(project)
+    res.json({ status: 'ok', label })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to update label' })
+  }
+})
+
+// ❌ Delete label
+app.delete('/projects/:projectId/labels/:labelId', requireAuth, async (req, res) => {
+  try {
+    const project = await getProject(req.params.projectId)
+    if (!project) return res.status(404).json({ error: 'Project not found' })
+    if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
+
+    project.labels = (project.labels || []).filter(l => l.id !== Number(req.params.labelId))
+
+    await saveProject(project)
+    res.json({ status: 'ok' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to delete label' })
+  }
+})
+
+// =========================
 // 🛍 PRODUCTS MASTER LIST
 // =========================
 

@@ -22,10 +22,22 @@ export interface Space {
   images?: string[];
 }
 
+export type LabelMachine = 'P-touch' | 'Cricut'
+
+export interface Label {
+  id: number;
+  machine: LabelMachine;
+  substrate: string;
+  color: string;
+  labelName: string;
+  spaceName: string;
+}
+
 export interface Project {
   id: number;
   name: string;
   spaces: Space[];
+  labels?: Label[];
 }
 
 export interface Product {

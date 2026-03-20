@@ -61,6 +61,15 @@ export const API_ROUTES = {
     `${API_BASE_URL}/projects/${projectId}/spaces/${spaceId}/measurements/${measurementId}/products/${sku}`,
 
   // ========================
+  // 🏷 Labels (under project)
+  // ========================
+  labels: (projectId: number) =>
+    `${API_BASE_URL}/projects/${projectId}/labels`,
+
+  label: (projectId: number, labelId: number) =>
+    `${API_BASE_URL}/projects/${projectId}/labels/${labelId}`,
+
+  // ========================
   // 🛍 Master Products
   // ========================
   products: `${API_BASE_URL}/products`,
