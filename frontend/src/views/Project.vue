@@ -322,7 +322,7 @@ async function handleUpdateproductQuantity(payload: {
 
 }
 
-async function handleLabelCreated(label: Omit<Label, 'id'>) {
+async function handleLabelCreated(label: Omit<Label, 'id'>): Promise<void> {
   if (!project.value) return
   const newLabel = await createLabel(Number(project.value.id), label)
   project.value.labels = [...(project.value.labels ?? []), newLabel]

@@ -60,7 +60,7 @@ import type { Project, Label } from '@/models'
 const props = defineProps<{ project: Project }>()
 
 const emit = defineEmits<{
-  (e: 'label-created', label: Label): void
+  (e: 'label-created', label: Omit<Label, 'id'>): void
   (e: 'label-updated', label: Label): void
   (e: 'label-deleted', labelId: number): void
 }>()
