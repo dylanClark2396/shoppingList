@@ -23,11 +23,6 @@
         </template>
       </Column>
       <Column field="quantity" header="Qty" style="width: 55px" />
-      <Column field="notes" header="Notes">
-        <template #body="{ data }">
-          <span class="truncate-cell">{{ data.notes }}</span>
-        </template>
-      </Column>
       <Column field="status" header="Status" style="width: 100px">
         <template #body="{ data }">
           <Tag
@@ -35,6 +30,11 @@
             :value="data.status"
             :severity="STATUS_SEVERITY[data.status as LabelStatus]"
           />
+        </template>
+      </Column>
+      <Column field="notes" header="Notes">
+        <template #body="{ data }">
+          <span class="truncate-cell">{{ data.notes }}</span>
         </template>
       </Column>
       <Column header="" style="width: 80px">
