@@ -127,7 +127,7 @@
                                 </div>
                                 <div class="accordion-right">
                                     <div class="flex justify-center" v-if="product.images?.length">
-                                        <Image v-for="value in product.images" :key="value" :src="'/' + value" alt="Image"
+                                        <Image v-for="value in product.images" :key="value" :src="value" alt="Image"
                                             width="50" preview />
                                     </div>
 
