@@ -29,7 +29,7 @@
       </Column>
     </DataTable>
 
-    <Dialog v-model:visible="showForm" :header="isEditing ? 'Edit Label' : 'Add Labels'" modal style="width: 500px">
+    <Dialog v-model:visible="showForm" :header="isEditing ? 'Edit Label' : 'Add Labels'" modal style="width: min(500px, 95vw)">
       <div class="form-fields">
         <!-- Space (top) -->
         <Select
@@ -100,7 +100,7 @@
               v-model="labelQtyInput"
               placeholder="Qty"
               :min="1"
-              style="width: 80px"
+              class="qty-input"
             />
             <Button icon="pi pi-plus" outlined @click="addLabelText" :disabled="!labelTextInput.trim()" />
           </div>
@@ -302,6 +302,16 @@ function handleDelete(labelId: number) {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  min-width: 0;
+}
+
+.qty-input {
+  width: 80px;
+  flex-shrink: 0;
+}
+
+:deep(.qty-input input) {
+  width: 80px;
 }
 
 .label-text-chips {
