@@ -95,12 +95,12 @@
               style="flex: 1"
               @keyup.enter="addLabelText"
             />
-            <InputNumber
-              v-model="labelQtyInput"
+            <InputText
+              v-model="labelQtyInputStr"
+              type="number"
               placeholder="Qty"
-              :min="1"
-              style="width: 80px; flex-shrink: 0"
-              :pt="{ root: { style: 'width: 80px' }, input: { style: 'width: 80px' } }"
+              min="1"
+              style="flex: 0 0 70px; min-width: 0"
             />
             <Button icon="pi pi-plus" outlined @click="addLabelText" :disabled="!labelTextInput.trim()" />
           </div>
@@ -188,7 +188,7 @@ const showForm = ref(false)
 const isEditing = ref(false)
 const form = ref<Partial<Label>>({})
 const labelTextInput = ref('')
-const labelQtyInput = ref<number | null>(null)
+const labelQtyInputStr = ref('')
 const labelTexts = ref<{ text: string; quantity: number | null }[]>([])
 
 const canSave = computed(() => {
@@ -208,7 +208,7 @@ function onMachineChange() {
 function openCreateForm() {
   form.value = {}
   labelTextInput.value = ''
-  labelQtyInput.value = null
+  labelQtyInputStr.value = ''
   labelTexts.value = []
   isEditing.value = false
   showForm.value = true
@@ -217,7 +217,7 @@ function openCreateForm() {
 function openEditForm(label: Label) {
   form.value = { ...label }
   labelTextInput.value = ''
-  labelQtyInput.value = null
+  labelQtyInputStr.value = ''
   labelTexts.value = []
   isEditing.value = true
   showForm.value = true
@@ -226,9 +226,10 @@ function openEditForm(label: Label) {
 function addLabelText() {
   const text = labelTextInput.value.trim()
   if (!text) return
-  labelTexts.value.push({ text, quantity: labelQtyInput.value })
+  const qty = labelQtyInputStr.value ? parseInt(labelQtyInputStr.value, 10) : null
+  labelTexts.value.push({ text, quantity: qty })
   labelTextInput.value = ''
-  labelQtyInput.value = null
+  labelQtyInputStr.value = ''
 }
 
 function removeLabelText(index: number) {
