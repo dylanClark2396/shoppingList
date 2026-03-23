@@ -51,7 +51,7 @@ const client = new DynamoDBClient({
   region: "us-east-2"
 })
 
-const db = DynamoDBDocumentClient.from(client)
+const db = DynamoDBDocumentClient.from(client, { marshallOptions: { removeUndefinedValues: true } })
 const PROJECT_TABLE = "projects"
 const PRODUCTS_TABLE = "products"
 
