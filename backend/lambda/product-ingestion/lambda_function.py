@@ -9,7 +9,7 @@ from decimal import Decimal
 
 # ========= CONFIG =========
 SKU_COLUMN = "sku"
-PRODUCTS_TABLE = os.environ.get("PRODUCTS_TABLE", "Products")
+PRODUCTS_TABLE = os.environ.get("PRODUCTS_TABLE", "products")
 PRODUCT_IMAGE_BUCKET = os.environ.get("PRODUCT_IMAGE_BUCKET")
 IMAGES_PREFIX = "product-images"
 # ==========================
