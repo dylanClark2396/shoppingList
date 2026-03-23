@@ -1,7 +1,10 @@
 <template>
   <div class="app-container">
     <div class="dataview-wrapper">
-      <h1 class="title">Projects</h1>
+      <div class="projects-header">
+        <h1 class="title">Projects</h1>
+        <Button label="Sign Out" icon="pi pi-sign-out" text size="small" severity="secondary" @click="logout" />
+      </div>
 
       <div style="display: flex; justify-content: flex-end; margin-bottom: .5rem;">
         <Button label="Create Project" class="btn-outlined" @click="handleCreateProject"
@@ -51,6 +54,9 @@ import { onMounted, ref } from 'vue';
 import router from '@/router';
 import type { Project, Space } from '@/models';
 import { useApi } from '@/composables/useApi';
+import { useAuth } from '@/composables/useAuth';
+
+const { logout } = useAuth();
 
 const { getProjects, createProject, createSpace } = useApi();
 
@@ -127,12 +133,18 @@ const removeSpace = (index: number) => {
   max-width: 800px;
 }
 
-/* Title */
+/* Header */
+.projects-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
 .title {
   font-size: 24px;
   font-weight: bold;
-  margin-bottom: 16px;
-  text-align: center;
+  margin: 0;
 }
 
 /* List layout */

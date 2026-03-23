@@ -7,6 +7,7 @@
     <span class="topbar-title">
       {{ project?.name }} - {{ currentSpace?.name }}
     </span>
+    <Button label="Sign Out" icon="pi pi-sign-out" text size="small" severity="secondary" @click="logout" />
   </div>
 
   <!-- Main content section -->
@@ -106,7 +107,10 @@ import { useRoute } from "vue-router";
 import { useConfirm } from "primevue/useconfirm";
 import type { Label, Measurement, Product, Project, Space } from "@/models";
 import { useApi } from '@/composables/useApi';
+import { useAuth } from '@/composables/useAuth';
 import MeasurementCardNew from "@/components/MeasurementCardNew.vue";
+
+const { logout } = useAuth();
 
 const {
   getProject,
