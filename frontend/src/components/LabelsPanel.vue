@@ -9,16 +9,25 @@
       <template #empty>
         <span class="empty-msg">No labels yet. Add one to get started.</span>
       </template>
-      <Column field="machine" header="Machine" style="width: 100px" />
-      <Column field="spaceName" header="Space" style="width: 120px" />
-      <Column field="labelName" header="Label Name" />
-      <Column field="color" header="Color" style="width: 150px" />
-      <Column header="Size / Material" style="width: 180px">
+      <Column field="machine" header="Machine" style="width: 90px" />
+      <Column field="spaceName" header="Space" style="width: 110px" />
+      <Column field="labelName" header="Label Name" style="width: 140px">
+        <template #body="{ data }">
+          <span class="truncate-cell">{{ data.labelName }}</span>
+        </template>
+      </Column>
+      <Column field="color" header="Color" style="width: 130px" />
+      <Column header="Size / Material" style="width: 160px">
         <template #body="{ data }">
           {{ data.machine === 'P-touch' ? data.size : data.material }}
         </template>
       </Column>
-      <Column field="quantity" header="Qty" style="width: 60px" />
+      <Column field="quantity" header="Qty" style="width: 55px" />
+      <Column field="notes" header="Notes">
+        <template #body="{ data }">
+          <span class="truncate-cell">{{ data.notes }}</span>
+        </template>
+      </Column>
       <Column header="" style="width: 80px">
         <template #body="{ data }">
           <div class="row-actions">
@@ -311,6 +320,14 @@ function handleDelete(labelId: number) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.truncate-cell {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty-msg {
