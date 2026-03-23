@@ -241,6 +241,7 @@ function onMachineChange() {
     spaceName: form.value.spaceName,
     machine: form.value.machine,
     notes: form.value.notes,
+    status: form.value.status,
   }
 }
 

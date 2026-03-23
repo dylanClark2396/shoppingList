@@ -481,12 +481,12 @@ app.post('/projects/:projectId/labels', requireAuth, async (req, res) => {
     if (!project) return res.status(404).json({ error: 'Project not found' })
     if (project.owner_id !== req.user.sub) return res.status(403).json({ error: 'Forbidden' })
 
-    const { machine, material, color, labelName, spaceName, size, notes, quantity } = req.body
+    const { machine, material, color, labelName, spaceName, size, notes, quantity, status } = req.body
     if (!['P-touch', 'Cricut'].includes(machine)) {
       return res.status(400).json({ error: 'Invalid machine' })
     }
 
-    const label = { id: generateId(), machine, material, color, labelName, spaceName, size, notes, quantity }
+    const label = { id: generateId(), machine, material, color, labelName, spaceName, size, notes, quantity, status: status ?? 'not made' }
 
     project.labels = project.labels || []
     project.labels.push(label)
