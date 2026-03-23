@@ -100,7 +100,8 @@
               v-model="labelQtyInput"
               placeholder="Qty"
               :min="1"
-              class="qty-input"
+              style="width: 80px; flex-shrink: 0"
+              :pt="{ root: { style: 'width: 80px' }, input: { style: 'width: 80px' } }"
             />
             <Button icon="pi pi-plus" outlined @click="addLabelText" :disabled="!labelTextInput.trim()" />
           </div>
@@ -290,6 +291,7 @@ function handleDelete(labelId: number) {
   flex-direction: column;
   gap: 0.75rem;
   padding-top: 0.5rem;
+  overflow: hidden;
 }
 
 .label-text-section {
@@ -302,17 +304,8 @@ function handleDelete(labelId: number) {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  min-width: 0;
 }
 
-.qty-input {
-  width: 80px;
-  flex-shrink: 0;
-}
-
-:deep(.qty-input input) {
-  width: 80px;
-}
 
 .label-text-chips {
   display: flex;
