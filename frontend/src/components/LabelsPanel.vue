@@ -178,9 +178,9 @@ const emit = defineEmits<{
 }>()
 
 const LABEL_STATUS_OPTIONS: { label: string; value: LabelStatus }[] = [
-  { label: 'NOT MADE', value: 'not made' },
-  { label: 'MADE', value: 'made' },
-  { label: 'APPLIED', value: 'applied' },
+  { label: 'Not Made', value: 'not made' },
+  { label: 'Made', value: 'made' },
+  { label: 'Applied', value: 'applied' },
 ]
 
 const PTOUCH_COLORS = ['Black on clear', 'White on clear']
