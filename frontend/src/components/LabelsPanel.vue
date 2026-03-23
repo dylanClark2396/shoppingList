@@ -38,7 +38,6 @@
           option-label="name"
           option-value="name"
           placeholder="Space"
-          editable
           fluid
         />
 
