@@ -9,6 +9,18 @@
       <template #empty>
         <span class="empty-msg">No labels yet. Add one to get started.</span>
       </template>
+      <Column field="status" header="Status" style="width: 120px">
+        <template #body="{ data }">
+          <Select
+            :model-value="data.status"
+            :options="LABEL_STATUSES"
+            placeholder="—"
+            size="small"
+            fluid
+            @change="(e: { value: LabelStatus }) => handleStatusChange(data, e.value)"
+          />
+        </template>
+      </Column>
       <Column field="machine" header="Machine" style="width: 90px" />
       <Column field="spaceName" header="Space" style="width: 110px" />
       <Column field="labelName" header="Label Name" style="width: 140px">
@@ -23,15 +35,6 @@
         </template>
       </Column>
       <Column field="quantity" header="Qty" style="width: 55px" />
-      <Column field="status" header="Status" style="width: 100px">
-        <template #body="{ data }">
-          <Tag
-            v-if="data.status"
-            :value="data.status"
-            :severity="STATUS_SEVERITY[data.status as LabelStatus]"
-          />
-        </template>
-      </Column>
       <Column field="notes" header="Notes">
         <template #body="{ data }">
           <span class="truncate-cell">{{ data.notes }}</span>
@@ -282,6 +285,10 @@ function handleSave() {
     })))
   }
   showForm.value = false
+}
+
+function handleStatusChange(label: Label, status: LabelStatus) {
+  emit('label-updated', { ...label, status })
 }
 
 function handleDelete(labelId: number) {
