@@ -67,6 +67,7 @@ jobs:
               --code "S3Bucket=$DEPLOY_BUCKET,S3Key=product-ingestion.zip" \
               --timeout 300 \
               --memory-size 512 \
+              --ephemeral-storage Size=3072 \
               --environment "Variables={PRODUCTS_TABLE=Products,PRODUCT_IMAGE_BUCKET=$PRODUCT_IMAGE_BUCKET}"
           fi
 
@@ -83,7 +84,8 @@ jobs:
 
           aws lambda update-function-configuration \
             --function-name product-ingestion \
-            --environment "$ENV_JSON"
+            --environment "$ENV_JSON" \
+            --ephemeral-storage Size=3072
 
       - name: Add S3 trigger (idempotent)
         run: |
