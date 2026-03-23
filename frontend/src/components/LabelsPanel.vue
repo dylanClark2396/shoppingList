@@ -9,15 +9,17 @@
       <template #empty>
         <span class="empty-msg">No labels yet. Add one to get started.</span>
       </template>
-      <Column field="status" header="Status" style="width: 120px">
+      <Column field="status" header="Status" style="width: 130px">
         <template #body="{ data }">
           <Select
             :model-value="data.status"
-            :options="LABEL_STATUSES"
+            :options="LABEL_STATUS_OPTIONS"
+            option-label="label"
+            option-value="value"
             placeholder="—"
             size="small"
             fluid
-            @change="(e: { value: LabelStatus }) => handleStatusChange(data, e.value)"
+            @update:model-value="(val: LabelStatus) => handleStatusChange(data, val)"
           />
         </template>
       </Column>
@@ -145,7 +147,9 @@
         <!-- Status -->
         <Select
           v-model="form.status"
-          :options="LABEL_STATUSES"
+          :options="LABEL_STATUS_OPTIONS"
+          option-label="label"
+          option-value="value"
           placeholder="Status"
           fluid
         />
@@ -173,12 +177,11 @@ const emit = defineEmits<{
   (e: 'label-deleted', labelId: number): void
 }>()
 
-const LABEL_STATUSES: LabelStatus[] = ['not made', 'made', 'applied']
-const STATUS_SEVERITY: Record<LabelStatus, string> = {
-  'not made': 'secondary',
-  'made': 'warn',
-  'applied': 'success',
-}
+const LABEL_STATUS_OPTIONS: { label: string; value: LabelStatus }[] = [
+  { label: 'NOT MADE', value: 'not made' },
+  { label: 'MADE', value: 'made' },
+  { label: 'APPLIED', value: 'applied' },
+]
 
 const PTOUCH_COLORS = ['Black on clear', 'White on clear']
 const PTOUCH_SIZES = ['.47in', '.94in']
