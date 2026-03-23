@@ -237,12 +237,9 @@ const canSave = computed(() => {
 })
 
 function onMachineChange() {
-  form.value = {
-    spaceName: form.value.spaceName,
-    machine: form.value.machine,
-    notes: form.value.notes,
-    status: form.value.status,
-  }
+  form.value.color = undefined
+  form.value.size = undefined
+  form.value.material = undefined
 }
 
 function openCreateForm() {
