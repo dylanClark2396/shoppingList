@@ -27,10 +27,13 @@ export type LabelMachine = 'P-touch' | 'Cricut'
 export interface Label {
   id: number;
   machine: LabelMachine;
-  substrate: string;
-  color: string;
-  labelName: string;
   spaceName: string;
+  labelName: string;
+  color: string;
+  size?: string;       // P-touch only
+  substrate?: string;  // Cricut only
+  notes?: string;
+  quantity?: number;
 }
 
 export interface Project {
