@@ -31,7 +31,7 @@ export interface Label {
   labelName: string;
   color: string;
   size?: string;       // P-touch only
-  substrate?: string;  // Cricut only
+  material?: string;   // Cricut only
   notes?: string;
   quantity?: number;
 }

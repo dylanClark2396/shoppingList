@@ -13,9 +13,9 @@
       <Column field="spaceName" header="Space" style="width: 120px" />
       <Column field="labelName" header="Label Name" />
       <Column field="color" header="Color" style="width: 150px" />
-      <Column header="Size / Substrate" style="width: 180px">
+      <Column header="Size / Material" style="width: 180px">
         <template #body="{ data }">
-          {{ data.machine === 'P-touch' ? data.size : data.substrate }}
+          {{ data.machine === 'P-touch' ? data.size : data.material }}
         </template>
       </Column>
       <Column field="quantity" header="Qty" style="width: 60px" />
@@ -70,7 +70,7 @@
         <!-- Cricut fields -->
         <template v-else-if="form.machine === 'Cricut'">
           <Select
-            v-model="form.substrate"
+            v-model="form.material"
             :options="CRICUT_SUBSTRATE_OPTIONS"
             option-group-label="label"
             option-group-children="items"
