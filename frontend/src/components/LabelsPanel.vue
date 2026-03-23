@@ -5,7 +5,30 @@
       <Button label="Add Label" icon="pi pi-plus" size="small" outlined @click="openCreateForm" />
     </div>
 
-    <DataTable :value="sortedLabels" size="small" class="labels-table">
+    <div class="filters">
+      <div class="filter-group">
+        <Button
+          v-for="m in ['P-touch', 'Cricut']"
+          :key="m"
+          :label="m"
+          size="small"
+          :outlined="filterMachine !== m"
+          @click="filterMachine = filterMachine === m ? null : m"
+        />
+      </div>
+      <div class="filter-group">
+        <Button
+          v-for="s in spaceOptions"
+          :key="s.name"
+          :label="s.name"
+          size="small"
+          :outlined="filterSpace !== s.name"
+          @click="filterSpace = filterSpace === s.name ? null : s.name"
+        />
+      </div>
+    </div>
+
+    <DataTable :value="filteredLabels" size="small" class="labels-table">
       <template #empty>
         <span class="empty-msg">No labels yet. Add one to get started.</span>
       </template>
@@ -221,6 +244,17 @@ const sortedLabels = computed(() =>
   })
 )
 
+const filterMachine = ref<string | null>(null)
+const filterSpace = ref<string | null>(null)
+
+const filteredLabels = computed(() =>
+  sortedLabels.value.filter(l => {
+    if (filterMachine.value && l.machine !== filterMachine.value) return false
+    if (filterSpace.value && l.spaceName !== filterSpace.value) return false
+    return true
+  })
+)
+
 const spaceOptions = computed(() => props.project.spaces)
 
 const showForm = ref(false)
@@ -316,6 +350,18 @@ function handleDelete(labelId: number) {
 .labels-title {
   font-size: 1.25rem;
   font-weight: 600;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
 .labels-table {
