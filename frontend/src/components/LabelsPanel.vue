@@ -28,6 +28,15 @@
           <span class="truncate-cell">{{ data.notes }}</span>
         </template>
       </Column>
+      <Column field="status" header="Status" style="width: 100px">
+        <template #body="{ data }">
+          <Tag
+            v-if="data.status"
+            :value="data.status"
+            :severity="STATUS_SEVERITY[data.status as LabelStatus]"
+          />
+        </template>
+      </Column>
       <Column header="" style="width: 80px">
         <template #body="{ data }">
           <div class="row-actions">
@@ -130,6 +139,14 @@
           <InputNumber v-model="form.quantity" placeholder="Quantity" fluid :min="1" />
         </template>
 
+        <!-- Status -->
+        <Select
+          v-model="form.status"
+          :options="LABEL_STATUSES"
+          placeholder="Status"
+          fluid
+        />
+
         <!-- Notes -->
         <Textarea v-model="form.notes" placeholder="Notes" fluid rows="2" auto-resize />
       </div>
@@ -143,7 +160,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { Project, Label } from '@/models'
+import type { Project, Label, LabelStatus } from '@/models'
 
 const props = defineProps<{ project: Project }>()
 
@@ -152,6 +169,13 @@ const emit = defineEmits<{
   (e: 'label-updated', label: Label): void
   (e: 'label-deleted', labelId: number): void
 }>()
+
+const LABEL_STATUSES: LabelStatus[] = ['not made', 'made', 'applied']
+const STATUS_SEVERITY: Record<LabelStatus, string> = {
+  'not made': 'secondary',
+  'made': 'warn',
+  'applied': 'success',
+}
 
 const PTOUCH_COLORS = ['Black on clear', 'White on clear']
 const PTOUCH_SIZES = ['.47in', '.94in']
@@ -215,7 +239,7 @@ function onMachineChange() {
 }
 
 function openCreateForm() {
-  form.value = {}
+  form.value = { status: 'not made' }
   labelTextInput.value = ''
   labelQtyInputStr.value = ''
   labelTexts.value = []

@@ -23,6 +23,7 @@ export interface Space {
 }
 
 export type LabelMachine = 'P-touch' | 'Cricut'
+export type LabelStatus = 'not made' | 'made' | 'applied'
 
 export interface Label {
   id: number;
@@ -34,6 +35,7 @@ export interface Label {
   material?: string;   // Cricut only
   notes?: string;
   quantity?: number;
+  status?: LabelStatus;
 }
 
 export interface Project {
